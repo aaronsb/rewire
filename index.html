@@ -64,7 +64,9 @@
     font-family:var(--disp);font-size:11px;color:var(--ink);letter-spacing:1px;
     -webkit-text-stroke:.5px var(--ink);}
   .pb-node__head>span:first-child{flex:1;}
-  .pb-node__tog,.pb-node__del{cursor:pointer;font-size:11px;opacity:.7;}
+  .pb-node__tog,.pb-node__clone,.pb-node__del{cursor:pointer;font-size:11px;opacity:.7;}
+  .pb-node__clone{font-family:'Segoe UI Symbol',system-ui,sans-serif;font-size:13px;}
+  .pb-node__clone:hover{opacity:1;color:var(--cyan);}
   .pb-node__del:hover{opacity:1;color:var(--pink);}
   .pb-node--clock .pb-node__head{background:var(--gold);}
   .pb-node--data  .pb-node__head{background:var(--cyan);}
@@ -186,7 +188,7 @@
   } else { pick.innerHTML='<option>(no tracks.js)</option>'; pick.disabled=true; }
 
   // node palette (left sidebar, icon + type color)
-  const ICONS={clock:"◷",scale:"▤",chords:"▦",motif:"♪",drums:"◉",bass:"▆",lead:"♫",
+  const ICONS={clock:"◷",clockmult:"⊗",scale:"▤",chords:"▦",motif:"♪",drums:"◉",bass:"▆",lead:"♫",
     pad:"▭",reverb:"∿",delay:"⇢",output:"▶",lfo:"〜",const:"▪",arrange:"≣",select:"⇄"};
   const pal=document.getElementById("palette"), cv=document.getElementById("canvas");
   let cascade=0;

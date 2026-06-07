@@ -174,13 +174,14 @@ function tom(out,t,freq,amp){
 // =====================================================================
 function emitDrums(out,t,bInSec,sec,p,env){
   const kit=KITS[p.kit]||KITS.default, spb=env.spb, six=spb/4;
-  if(sec.kind==="build" && bInSec===SECT_BARS-1){          // build turnaround
+  const fills = p.fills!==false;                            // off = steady groove, no fills/turnaround
+  if(fills && sec.kind==="build" && bInSec===SECT_BARS-1){  // build turnaround
     for(let n=0;n<8;n++) snare(out,t+n*(spb/4),.42*p.gain,kit);
     const toms=[200,160,120,80]; for(let n=0;n<4;n++) tom(out,t+n*(spb/2),toms[n],.5*p.gain);
     return;
   }
   const lastSect=bInSec===SECT_BARS-1, midSect=bInSec===SECT_BARS/2-1;
-  if(lastSect && sec.kind!=="build"){                       // end-of-section fill
+  if(fills && lastSect && sec.kind!=="build"){              // end-of-section fill
     kick(out,t,.55*p.gain,kit); snare(out,t,.3*p.gain,kit); snare(out,t+spb,.4*p.gain,kit);
     const ramp=[70,80,95,110,130,150,175,200];
     for(let i=0;i<8;i++) tom(out,t+2*spb+i*(spb/4),ramp[i],.45*p.gain);
@@ -190,7 +191,7 @@ function emitDrums(out,t,bInSec,sec,p,env){
   for(const s of grid.kicks) kick(out,t+s*six,(s===0?.55:.5)*p.gain,kit);
   for(const s of grid.snares) snare(out,t+s*six,.4*p.gain,kit);
   for(const s of grid.hats) hat(out,t+s*six,.1*p.gain,kit,false);
-  if(midSect) for(let a=0;a<4;a++) snare(out,t+3*spb+a*(spb/4),.3*p.gain,kit);
+  if(fills && midSect) for(let a=0;a<4;a++) snare(out,t+3*spb+a*(spb/4),.3*p.gain,kit);
   if(p.clap) for(const s of grid.snares) clap(out,t+s*six,.32*p.gain);
   if(p.openHat) for(const s of [2,6,10,14]) hat(out,t+s*six,.09*p.gain,kit,true);
 }
@@ -297,6 +298,14 @@ function inputSrc(node,port){
   const e = PB.edges.find(ed=>ed.to===node.id && ed.toPort===port);
   return e ? PB.nodes.find(n=>n.id===e.from) : null;
 }
+// follow a clock wire through any MULT (divider/multiplier) nodes to the real
+// clock, accumulating the rate factor -> effective {bpm, swing, enabled}.
+function resolveClock(src){
+  let factor=1, n=src, guard=0;
+  while(n && n.type==="clockmult" && guard++<16){ factor*=(parseFloat(n.params.factor)||1); n=inputSrc(n,"clock"); }
+  if(n && n.type==="clock") return {bpm:(n.params.bpm||120)*factor, swing:n.params.swing||0, enabled:n.params.enabled!==false};
+  return {bpm:120*factor, swing:0, enabled:false};   // chain never reaches a real clock -> idle
+}
 function tagChords(chords){ return chords.map((c,i)=>Object.assign({},c,{__idx:i})); }
 
 // resolve a voice's section: from a wired Arrange node, else the global clock
@@ -308,7 +317,15 @@ function sectionFor(node,absBar,gsec){
   return {sec:gsec,bInSec:absBar%SECT_BARS};
 }
 
-function gsecFor(ab){ return PB.clock.arrange==="evolve" ? SECTION_DEFS[Math.floor(ab/SECT_BARS)%8] : {name:"loop",kind:"var"}; }
+// global section: an ARRANGE node wired into the (primary) clock drives it;
+// otherwise fall back to the clock's evolve/steady param.
+function gsecFor(ab){
+  const clkNode = PB.nodes.find(n=>n.type==="clock");
+  const arrSrc = clkNode && inputSrc(clkNode,"arrange");
+  if(arrSrc){ const steps=(arrSrc.params.steps&&arrSrc.params.steps.length)?arrSrc.params.steps:DEFAULT_ARRANGE;
+    return SECTION_BY_NAME[steps[Math.floor(ab/SECT_BARS)%steps.length]]||SECTION_DEFS[0]; }
+  return PB.clock.arrange==="evolve" ? SECTION_DEFS[Math.floor(ab/SECT_BARS)%8] : {name:"loop",kind:"var"};
+}
 
 // emit ONE bar of a single voice at its own tempo (env), capturing events
 function emitVoiceBar(node,t,barIdx,env){
@@ -343,17 +360,15 @@ function tick(){
   }
   const anySolo=PB.nodes.some(n=>n.solo);
   for(const node of PB.nodes){
-    const clk=inputSrc(node,"clock"); if(!clk) continue;     // no clock -> idle
-    const vbpm=clk.params.bpm||120, vbar=60/vbpm*4, vspb=60/vbpm;
+    const csrc=inputSrc(node,"clock"); if(!csrc) continue;   // no clock -> idle
+    const C=resolveClock(csrc), off=!C.enabled;              // off (or disabled clock) = block routing
+    const vbpm=C.bpm||120, vbar=60/vbpm*4, vspb=60/vbpm;
     if(node.cursor==null){ node.cursor=PB.t0||now; node.barIdx=0; }
-    if(node.type==="select"){
-      while(node.cursor<now+vbar*LA){ if(PB.app&&PB.app.advanceSelect) PB.app.advanceSelect(node,node.barIdx); node.cursor+=vbar; node.barIdx++; }
-      continue;
-    }
+    if(node.type==="select") continue;     // router switching is time-based, handled in modLoop
     if(!node.audioOut) continue;
-    if(node.muted || (anySolo && !node.solo)){               // keep phase, emit nothing
+    if(off || node.muted || (anySolo && !node.solo)){        // keep phase, emit nothing
       while(node.cursor<now+vbar*LA){ node.cursor+=vbar; node.barIdx++; } continue; }
-    const env={spb:vspb,bar:vbar,halfBeat:vspb/2,swing:clk.params.swing||0};
+    const env={spb:vspb,bar:vbar,halfBeat:vspb/2,swing:C.swing};
     while(node.cursor<now+vbar*LA){ emitVoiceBar(node,node.cursor,node.barIdx,env); node.cursor+=vbar; node.barIdx++; }
   }
   for(const k in PB.events){ const a=PB.events[k]; if(a.length>500) a.splice(0,a.length-500); }  // trim
@@ -390,6 +405,18 @@ function modLoop(){
     if(e.type!=="mod") continue;
     const s=PB.nodes.find(n=>n.id===e.from), t=PB.nodes.find(n=>n.id===e.to);
     if(s&&t) applyMod(t,e.toPort,modValue(s,now));
+  }
+  // routers advance on real playback time (follows divided clocks), switching
+  // exactly when the bar plays rather than during lookahead scheduling.
+  if(PB.running && PB.ctx){ const t0=PB.t0||0;
+    for(const node of PB.nodes){
+      if(node.type!=="select") continue;
+      const csrc=inputSrc(node,"clock"); if(!csrc) continue;
+      const C=resolveClock(csrc); if(!C.enabled) continue;
+      const vbar=60/(C.bpm||120)*4, el=now-t0; if(el<0) continue;
+      const a=Math.floor((el/vbar)/Math.max(1,node.params.every||1))%4;
+      if(a!==node.params.active && PB.app && PB.app.setSelectActive) PB.app.setSelectActive(node,a);
+    }
   }
   requestAnimationFrame(modLoop);
 }

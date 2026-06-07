@@ -7,11 +7,16 @@
 // audio: "voice" (has audioOut), "fx" (audioIn+audioOut), "out" (audioIn), null (data only)
 const NODE_DEFS = {
   clock: { title:"CLOCK", cls:"clock", audio:null,
-    ins:[{name:"swing",type:"mod"}], outs:[{name:"clock",type:"clock"}],
-    params:{bpm:120,swing:0,arrange:"evolve"},
-    controls:[{k:"bpm",t:"range",min:60,max:180,step:1,unit:" bpm"},
+    ins:[{name:"swing",type:"mod"},{name:"arrange",type:"arrange"}], outs:[{name:"clock",type:"clock"}],
+    params:{bpm:120,swing:0,arrange:"evolve",enabled:true},
+    controls:[{k:"enabled",t:"check"},
+              {k:"bpm",t:"range",min:60,max:180,step:1,unit:" bpm"},
               {k:"swing",t:"range",min:0,max:100,step:1,unit:"%"},
               {k:"arrange",t:"select",opts:["evolve","steady"]}] },
+  clockmult:{ title:"MULT", cls:"clock", audio:null,
+    ins:[{name:"clock",type:"clock"}], outs:[{name:"clock",type:"clock"}],
+    params:{factor:0.5},
+    controls:[{k:"factor",t:"select",opts:["0.0625","0.125","0.25","0.5","1","2","4","8"]}] },
   scale: { title:"SCALE", cls:"data", audio:null,
     ins:[], outs:[{name:"scale",type:"scale"}],
     params:{scaleHz:[]},
@@ -27,11 +32,11 @@ const NODE_DEFS = {
               {k:"busyRhythm",t:"select",opts:["chunky","galloping","syncopated","flurry","driving"]}] },
   drums: { title:"DRUMS", cls:"voice", audio:"voice",
     ins:[{name:"clock",type:"clock"},{name:"arrange",type:"arrange"},{name:"gain",type:"mod"}], outs:[{name:"out",type:"audio"}],
-    params:{density:"normal",pattern:"",kit:"default",clap:false,openHat:false,gain:1},
+    params:{density:"normal",pattern:"",kit:"default",fills:true,clap:false,openHat:false,gain:1},
     controls:[{k:"density",t:"select",opts:["sparse","normal","dense"]},
               {k:"pattern",t:"select",opts:["","rock-backbeat","disco-four-on-floor","breakbeat","shuffle","samba","trap-rolls","bossa","motorik","half-time","dembow"]},
               {k:"kit",t:"select",opts:["default","lofi","punchy","acoustic","808","distorted"]},
-              {k:"clap",t:"check"},{k:"openHat",t:"check"},
+              {k:"fills",t:"check"},{k:"clap",t:"check"},{k:"openHat",t:"check"},
               {k:"gain",t:"range",min:0,max:1.5,step:.05}] },
   bass:  { title:"BASS", cls:"voice", audio:"voice",
     ins:[{name:"clock",type:"clock"},{name:"chords",type:"chords"},{name:"arrange",type:"arrange"},{name:"gain",type:"mod"}], outs:[{name:"out",type:"audio"}],
@@ -98,6 +103,12 @@ function addNode(type,x,y,params){
   PB.nodes.push(node);
   if(PB.ctx) buildAudio(node);
   renderNode(node); return node;
+}
+// clone a block (params/settings only, not its wiring), offset in place
+function cloneNode(n){
+  const c=addNode(n.type, n.x+28, n.y+28, JSON.parse(JSON.stringify(n.params)));
+  if(n.collapsed){ c.collapsed=true; if(c.el){ const b=c.el.querySelector(".pb-node__body"); if(b) b.style.display="none"; const t=c.el.querySelector(".pb-node__tog"); if(t) t.textContent="▸"; } }
+  drawWires(); return c;
 }
 function removeNode(node){
   PB.edges.filter(e=>e.from===node.id||e.to===node.id).slice().forEach(removeEdge);
@@ -286,9 +297,11 @@ function renderNode(n){
   head.innerHTML=`<span>${def.title}</span>`;
   const tog=document.createElement("span"); tog.className="pb-node__tog"; tog.textContent=n.collapsed?"▸":"▾";
   tog.addEventListener("click",ev=>{ ev.stopPropagation(); n.collapsed=!n.collapsed; tog.textContent=n.collapsed?"▸":"▾"; body.style.display=n.collapsed?"none":""; drawWires(); });
+  const clone=document.createElement("span"); clone.className="pb-node__clone"; clone.textContent="❐"; clone.title="clone";
+  clone.addEventListener("click",ev=>{ ev.stopPropagation(); cloneNode(n); });
   const del=document.createElement("span"); del.className="pb-node__del"; del.textContent="✕";
   del.addEventListener("click",ev=>{ ev.stopPropagation(); removeNode(n); });
-  head.appendChild(tog); head.appendChild(del); el.appendChild(head);
+  head.appendChild(tog); head.appendChild(clone); head.appendChild(del); el.appendChild(head);
   // ports row
   const prow=document.createElement("div"); prow.className="pb-node__ports";
   const incol=document.createElement("div"); incol.className="pb-ports pb-ports--in";
@@ -367,7 +380,7 @@ const drawWires_raf = ()=>requestAnimationFrame(drawWires);
 
 // ---- dragging nodes -------------------------------------------------
 function startDragNode(e,n,el){
-  if(e.target.closest(".pb-node__tog,.pb-node__del")) return;
+  if(e.target.closest(".pb-node__tog,.pb-node__clone,.pb-node__del")) return;
   e.preventDefault(); const sx=e.clientX, sy=e.clientY, ox=n.x, oy=n.y;
   const mv=ev=>{ n.x=ox+(ev.clientX-sx); n.y=oy+(ev.clientY-sy); el.style.left=n.x+"px"; el.style.top=n.y+"px"; drawWires(); };
   const up=()=>{ window.removeEventListener("pointermove",mv); window.removeEventListener("pointerup",up); };
