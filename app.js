@@ -301,7 +301,15 @@ function renderNode(n){
   clone.addEventListener("click",ev=>{ ev.stopPropagation(); cloneNode(n); });
   const del=document.createElement("span"); del.className="pb-node__del"; del.textContent="✕";
   del.addEventListener("click",ev=>{ ev.stopPropagation(); removeNode(n); });
-  head.appendChild(tog); head.appendChild(clone); head.appendChild(del); el.appendChild(head);
+  head.appendChild(tog);
+  if(window.PB.visual && PB.visual.has(n.type)){               // text/visual editor toggle
+    const ed=document.createElement("span"); ed.className="pb-node__edit"; ed.title="text / visual editor";
+    const setLbl=()=>ed.textContent = n.editMode==="visual" ? "T" : "▦";
+    ed.addEventListener("click",ev=>{ ev.stopPropagation();
+      n.editMode = n.editMode==="visual" ? "text" : "visual"; setLbl(); renderBody(n,body); drawWires(); });
+    head.appendChild(ed); n._edLbl=setLbl;
+  }
+  head.appendChild(clone); head.appendChild(del); el.appendChild(head);
   // ports row
   const prow=document.createElement("div"); prow.className="pb-node__ports";
   const incol=document.createElement("div"); incol.className="pb-ports pb-ports--in";
@@ -309,12 +317,19 @@ function renderNode(n){
   def.ins.forEach(p=>incol.appendChild(portEl(n,"in",p)));
   def.outs.forEach(p=>outcol.appendChild(portEl(n,"out",p)));
   prow.appendChild(incol); prow.appendChild(outcol); el.appendChild(prow);
-  // body (params)
+  // body (params) — visual editor or raw controls, per node.editMode
   const body=document.createElement("div"); body.className="pb-node__body"; if(n.collapsed) body.style.display="none";
-  def.controls.forEach(c=>body.appendChild(controlEl(n,c))); el.appendChild(body);
+  el.appendChild(body); renderBody(n,body); if(n._edLbl) n._edLbl();
 
   head.addEventListener("pointerdown",e=>startDragNode(e,n,el));
   canvas().appendChild(el); n.el=el;
+}
+// fill a node body: visual editor when editMode==="visual" and one exists, else the raw controls
+function renderBody(n,body){
+  body.innerHTML="";
+  if(n.editMode===undefined) n.editMode = (window.PB.visual && PB.visual.has(n.type)) ? "visual" : "text";
+  if(n.editMode==="visual" && window.PB.visual && PB.visual.has(n.type)) body.appendChild(PB.visual.build(n));
+  else NODE_DEFS[n.type].controls.forEach(c=>body.appendChild(controlEl(n,c)));
 }
 function portEl(n,dir,p){
   const w=document.createElement("div"); w.className="pb-port pb-port--"+dir;
