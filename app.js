@@ -68,6 +68,12 @@ const NODE_DEFS = {
     params:{feedback:.3,time:.75},
     controls:[{k:"feedback",t:"range",min:0,max:.85,step:.05},
               {k:"time",t:"range",min:.25,max:1.5,step:.25,unit:" beat"}] },
+  filter:{ title:"FILTER", cls:"fx", audio:"fx",
+    ins:[{name:"in",type:"audio"},{name:"cutoff",type:"mod"},{name:"reso",type:"mod"}], outs:[{name:"out",type:"audio"}],
+    params:{ftype:"lowpass",cutoff:1200,reso:4},
+    controls:[{k:"ftype",t:"select",opts:["lowpass","highpass","bandpass"]},
+              {k:"cutoff",t:"range",min:80,max:12000,step:20,unit:" hz"},
+              {k:"reso",t:"range",min:0,max:20,step:.5}] },
   output:{ title:"OUTPUT", cls:"out", audio:"out",
     ins:[{name:"in",type:"audio"},{name:"volume",type:"mod"}], outs:[],
     params:{volume:.8},
@@ -168,6 +174,10 @@ function buildAudio(node){
       const conv=ctx.createConvolver(); conv.buffer=ir;
       const wet=ctx.createGain(); wet.gain.value=node.params.wetness;
       i.connect(o); i.connect(conv); conv.connect(wet).connect(o); node._wet=wet;
+    } else if(node.type==="filter"){
+      const flt=ctx.createBiquadFilter(); flt.type=node.params.ftype||"lowpass";
+      flt.frequency.value=node.params.cutoff; flt.Q.value=node.params.reso;
+      i.connect(flt).connect(o); node._flt=flt;                 // fully filtered (no dry path)
     } else {
       const dly=ctx.createDelay(2); dly.delayTime.value=node.params.time*PB.clock.spb;
       const fb=ctx.createGain(); fb.gain.value=Math.min(.85,node.params.feedback);
@@ -225,6 +235,7 @@ function setParam(node,k,v){
   if(node.type==="select"&&k==="active") setSelectActive(node,v|0);
   if(node.type==="reverb"&&node._wet) node._wet.gain.value=v*1; // wetness
   if(node.type==="delay"&&node._fb){ if(k==="feedback") node._fb.gain.value=Math.min(.85,v); if(k==="time"&&node._dly) node._dly.delayTime.value=v*PB.clock.spb; }
+  if(node.type==="filter"&&node._flt){ if(k==="ftype") node._flt.type=v; if(k==="cutoff") node._flt.frequency.value=v; if(k==="reso") node._flt.Q.value=v; }
   if(node.type==="output"&&node._vol&&k==="volume") node._vol.gain.value=v;
 }
 
