@@ -93,6 +93,9 @@
   .pb-port--in .pb-dot{background:var(--cream);border-color:var(--dot);}
   .pb-port--in .pb-dot.pb-dot--wired{background:var(--dot);border-color:var(--ink);box-shadow:0 0 0 1px var(--ink),0 0 6px var(--dot);}
   .pb-port--in:not(.pb-port--wired) .pb-port__lbl{opacity:.5;}
+  /* signal-activity blink: a wired input flashes ~100ms each time a signal arrives */
+  @keyframes pb-sig{ 0%{box-shadow:0 0 0 2px #fff,0 0 13px 4px var(--dot);} 100%{box-shadow:0 0 0 1px var(--ink),0 0 6px var(--dot);} }
+  .pb-port--in .pb-dot--sig{animation:pb-sig 100ms ease-out;}
   .pb-node__body{padding:8px 10px 10px;display:flex;flex-direction:column;gap:7px;}
   .pb-ctl{display:flex;flex-direction:column;gap:3px;}
   .pb-ctl__k{font-family:var(--disp);font-size:7px;color:var(--ink);opacity:.7;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;}

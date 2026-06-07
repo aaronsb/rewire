@@ -155,6 +155,13 @@ function reflectPorts(){
     dot.title = on ? "external driver (wired)" : "built-in default — nothing wired";
   });
 }
+// flash a node's wired input ports (~100ms) to show a signal just arrived
+function pulseInputs(nodeId){
+  const id=(window.CSS&&CSS.escape)?CSS.escape(nodeId):nodeId;
+  canvas().querySelectorAll('.pb-dot--wired[data-id="'+id+'"][data-dir="in"]').forEach(d=>{
+    d.classList.remove("pb-dot--sig"); void d.offsetWidth; d.classList.add("pb-dot--sig");   // reflow retriggers the anim
+  });
+}
 const node = id => PB.nodes.find(n=>n.id===id);
 
 // ---- live audio routing ---------------------------------------------
@@ -226,7 +233,7 @@ function start(){
   PB.gate.gain.setValueAtTime(1e-4,PB.ctx.currentTime);
   PB.gate.gain.linearRampToValueAtTime(.9,PB.ctx.currentTime+.4);
   const t0=PB.ctx.currentTime+.1; PB.t0=t0; PB.master={cursor:t0,absBar:0};
-  PB.nodes.forEach(n=>{ n.cursor=null; n.barIdx=0; });   // reset per-voice timelines
+  PB.nodes.forEach(n=>{ n.cursor=null; n.barIdx=0; n._sigT=t0; });   // reset per-voice timelines + signal-activity cursor
   PB.running=true; PB.engine.tick();
   document.getElementById("playBtn").classList.add("on");
 }
@@ -511,4 +518,4 @@ function reflect(node,key,val,unit){
   if(out) out.textContent=(Math.round(val*100)/100)+(unit||"");
 }
 PB.app={ addNode, removeNode, addEdge, removeEdge, loadSpec, start, stop, NODE_DEFS, clearGraph, drawWires, node, setParam, reflect, setSelectActive, advanceSelect,
-  serialize, deserialize, listPatches, savePatch, loadPatch, deletePatch, exportPatch, importPatch };
+  serialize, deserialize, listPatches, savePatch, loadPatch, deletePatch, exportPatch, importPatch, pulseInputs };
