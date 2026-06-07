@@ -31,7 +31,8 @@ python3 -m http.server 8731   # from the repo root
 |------|------|
 | `index.html` | Markup, all CSS (pixel-arcade theme), boot script, left palette |
 | `engine.js` | AudioContext, voice synthesis, the scheduler, modulation, capture |
-| `app.js` | Node/edge model, `NODE_DEFS`, live audio routing, spec loader, node+wire UI |
+| `app.js` | Node/edge model, `NODE_DEFS`, live audio routing, spec loader, **patch save/load (serialize/deserialize)**, node+wire UI |
+| `visual.js` | **Visual creator mode** — point-and-click editors (piano/chords/motif/arrange) registered as `PB.visual` |
 | `tracker.js` | ScreamTracker-style pattern view (draggable, scrolling) |
 | `tracks.js` | `window.SS_TRACKS` — 33 song specs extracted from the original game |
 
@@ -64,6 +65,7 @@ All four scripts run in global scope and coordinate through `window.PB`
 **Effects / routing / sink**
 - `reverb` — convolution (synth impulse). `{wetness}`. in: audio + wetness(mod). out: audio.
 - `delay` — feedback delay. `{feedback, time(beats)}`. in: audio + feedback(mod). out: audio.
+- `filter` — `BiquadFilterNode`. `{ftype(lowpass/highpass/bandpass), cutoff, reso}`. in: audio + cutoff(mod) + reso(mod). out: audio. Fully filtered (no dry path). LFO→cutoff is the classic sweep.
 - `select` — audio router: 4 audio ins (`in0..in3`) → 1 out. `{active, every(bars)}`. Wire a `clock` in to auto-cycle `active` every N bars (rhythmic switcher / A-B bypass).
 - `output` — `{volume}`. in: audio + volume(mod). Feeds the master compressor → gate → speakers.
 
@@ -71,7 +73,32 @@ All four scripts run in global scope and coordinate through `window.PB`
 - `lfo` — `{shape(sine/triangle/saw/square/s&h), rate(bars), depth, offset}`.
 - `const` — `{value}`.
 
-Mod targets (the `mod` input ports): voice `gain`, reverb `wetness`, delay `feedback`, output `volume`, clock `swing`. A mod value is 0..1, mapped to the target control's `[min,max]`.
+Mod targets (the `mod` input ports): voice `gain`, reverb `wetness`, delay `feedback`, filter `cutoff`/`reso`, output `volume`, clock `swing`. A mod value is 0..1, mapped to the target control's `[min,max]`.
+
+## Visual creator mode (visual.js)
+
+The typed entry nodes (`scale`/`chords`/`motif`/`arrange`) have a **text/visual
+toggle** in the node header (the `T`/`▦` button). `PB.visual` registers one editor
+per type; `renderBody` (app.js) swaps the node body per `node.editMode`. Editors
+write back to the **same params** the engine reads (`scaleHz`, `chords`,
+`leadMotif`, `steps`) via `setParam`, so the engine needs no changes. Editor
+state lives on `node.vis` (and is serialized). Loaded tracks are reflected via
+best-effort inference (scale pitch classes; chord interval→quality matching).
+- **scale** — piano keyboard (toggle degrees) + root, octave range, scale presets.
+- **chords** — progression builder (root+quality+bars per slot) + roman-numeral
+  presets generated from a chosen key.
+- **motif** — step grid (steps × chord-tone index) + contour presets + busy rhythm.
+- **arrange** — draggable section chips + arrangement presets.
+
+## Patch save/load (app.js)
+
+`serialize()` snapshots `{v,t,nodes:[{id,type,x,y,collapsed,editMode,vis,params}],
+edges:[{from,fromPort,to,toPort}]}`; `deserialize()` clears + rebuilds via
+`addNode`/`addEdge`, remapping saved ids → rebuilt ids (PB.seq differs after
+`clearGraph`). localStorage named slots (`pb:patch:<name>`) via
+`savePatch`/`loadPatch`/`listPatches`/`deletePatch`; file `exportPatch` (download)
+/ `importPatch` (FileReader). Top-bar patches menu wires it all. This JSON is the
+canonical in/out format for the planned LLM-agent direction.
 
 ## Engine (engine.js)
 

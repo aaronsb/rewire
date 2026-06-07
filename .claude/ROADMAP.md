@@ -3,42 +3,19 @@
 Ordered roughly by value × readiness. Each item notes the approach so a future
 session can pick it up without re-deriving.
 
-## 1. Visual creator mode (the big one — next)
+## ✅ Done (this work shipped)
 
-Goal: the typed-JSON entry nodes (`scale`, `chords`, `motif`, `arrange`) get a
-**toggle** between "text" and "visual" editing so you can build musical content
-without knowing Hz or JSON. Each visual editor writes back to the same `params`
-the engine already reads, so the engine needs no changes.
+- **Visual creator mode** (was #1) — `visual.js`: per-node text/visual header
+  toggle with piano-keyboard scale editor, chord-progression builder (roman-numeral
+  presets), motif step-grid + contour presets, arrange chip-builder. Writes back to
+  the same params; loaded tracks reflected via inference. See BRIEFING.
+- **Save / load patches** (was #2) — `serialize`/`deserialize` in `app.js`,
+  localStorage named slots + file export/import, top-bar patches menu. Canonical
+  JSON for the LLM-agent direction.
+- **Filter node** (was #3) — `BiquadFilterNode` fx node, lowpass/highpass/bandpass,
+  cutoff + reso as mod targets (LFO→cutoff sweep works).
 
-Implementation sketch:
-- Add a control type `t:"visual"` (or a per-node toggle button in the header) that
-  swaps the node body between the existing textarea and a custom editor element.
-- **Scale** — a 1–2 octave **piano keyboard** widget: click keys to toggle scale
-  degrees; a **root** selector + **octave range**; a **preset dropdown** (major,
-  natural/harmonic/melodic minor, dorian, phrygian, lydian, mixolydian, locrian,
-  pentatonic major/minor, blues, whole-tone, chromatic). Generates `scaleHz`
-  across the chosen octaves from `root * 2^(semitone/12)`.
-- **Motif** — a **step sequencer grid** (steps × scale degrees) to draw the lead
-  line; writes `leadMotif` as indices. Optional preset contours (ascending,
-  arch, call-response). Could also drive the `+` variants.
-- **Chords** — a **progression builder**: per slot pick root + quality
-  (maj/min/maj7/min7/sus/dim); generate `{r,t,f,o}` from the key. Progression
-  presets: I–IV–V–I, ii–V–I, I–V–vi–IV, vi–IV–I–V, 12-bar blues.
-- **Arrange** — clickable **section chips** (`tonal var poly build …`); click to
-  append, drag to reorder, click-to-remove; length control; presets
-  (intro→build→drop, steady-loop). Writes `steps`.
-
-Why first: the user explicitly can't intuit what to type into `arrange`/`scale`;
-this unlocks the whole instrument for non-Hz-fluent use.
-
-## 2. Save / load patches
-
-Serialize `{nodes:[{id,type,x,y,collapsed,params}], edges:[{from,fromPort,to,toPort}]}`
-to JSON. Save to `localStorage` (named slots) and export/import as a `.json` file.
-Add a small "patches" menu in the top bar. Rebuild via existing `addNode`/`addEdge`.
-This makes the woozy multi-clock accidents (and everything else) keepable.
-
-## 2b. Generalize MULT beyond clocks
+## Generalize MULT beyond clocks
 
 The `clockmult` node multiplies/divides a **clock** rate (built — feeds dividers
 into SELECT/voices for slow, phase-locked switching). The same "multiply" idea
@@ -50,37 +27,31 @@ MULT that adapts to the wired type):
   gating, sidechain-style ducking. Implement as an audio node whose `GainNode`
   gain is driven by the mod input each frame.
 
-## 3. Filter node
-
-A `filter` node (lowpass/highpass/bandpass via `BiquadFilterNode`) with
-`cutoff` + `resonance`, both **mod targets**. Biggest single sonic upgrade —
-LFO→cutoff is the classic move. Audio fx node (in/out), same pattern as reverb.
-
-## 4. Recording / export
+## Recording / export
 
 `MediaStreamDestination` + `MediaRecorder` on the master to capture a take to
 `.webm`/`.wav` for download. A record button in the transport.
 
-## 5. Polyrhythm helper for clocks
+## Polyrhythm helper for clocks
 
 Multi-clock is free-running (the "drunk" drift). Add an optional per-clock
 **ratio/mult** (½×, ¾×, 2×, 3× of a reference) so users can get *tight*
 cross-rhythms on demand, alongside the loose drift. Keep both modes.
 
-## 6. Tracker as input (ambitious)
+## Tracker as input (ambitious)
 
 Let clicking a tracker cell add/remove a hit, turning the tracker from a
 read-only display into a step editor that feeds a per-voice pattern override.
 Tension: voices are currently algorithmic; this needs a "manual pattern" voice
 mode or an override layer. Design before building.
 
-## 7. More node types
+## More node types
 
 - `arp` node (arpeggiator over a chord input, rate/range/direction).
 - noise/sample voice; sidechain (duck a voice on kick).
 - MIDI in (Web MIDI) for external clock/notes.
 
-## 8. UX polish
+## UX polish
 
 - Touch support for port drag (mobile).
 - Pan/zoom the canvas.
@@ -131,20 +102,21 @@ Why it's tractable here:
 - The tracker + graph give immediate visual feedback of the model's choices.
 
 Prerequisites / build order:
-1. **Patch serialization** (roadmap #2) — canonical JSON in/out is the shared
-   language between the model and the rig. Do this first.
+1. ✅ **Patch serialization** — done (`PB.app.serialize`/`deserialize`). Canonical
+   JSON in/out is the shared language between the model and the rig.
 2. A small **edit protocol**: a structured "patch diff" the model emits
    (`set param`, `add/remove node`, `add/remove edge`, `toggle clock`) validated
-   before apply. Mirror the `PB.app` API.
+   before apply. Mirror the `PB.app` API. **This is now the next big piece.**
 3. A **loop driver**: every N bars (a divided clock!), snapshot state → ask the
    model for the next shift → apply on the bar boundary → repeat. The clock
    divider + `PB.onBar` hook are the timing substrate.
 4. **Guardrails**: keep edits incremental (no full-graph rewrites), clamp param
    ranges, and keep a human "take the wheel" override.
 
-This reframes earlier items: save/load (#2) is the foundation; the macro clock
-layer (block routing) is how the agent moves between sections; the visual creator
-(#1) is the human-side counterpart to the model's edits.
+Foundation is in place: save/load serialization is the shared language; the macro
+clock layer (block routing) is how the agent moves between sections; the visual
+creator is the human-side counterpart to the model's edits — all shipped. The
+**edit protocol + loop driver** is the remaining path to the live-performance agent.
 
 ## Known limitations to revisit
 
