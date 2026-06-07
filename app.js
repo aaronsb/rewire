@@ -282,6 +282,59 @@ function loadSpec(spec){
 }
 
 // =====================================================================
+//  Patch serialization — save / load the whole graph
+// =====================================================================
+// The instrument is pure data: {nodes,edges,params}. Snapshot it to JSON
+// (localStorage slots + file export) and rebuild via addNode/addEdge. This
+// is also the canonical in/out format for the LLM-agent direction.
+function serialize(){
+  return { v:1, t:Date.now(),
+    nodes:PB.nodes.map(n=>({ id:n.id, type:n.type, x:Math.round(n.x), y:Math.round(n.y),
+      collapsed:!!n.collapsed, editMode:n.editMode, vis:n.vis, params:n.params })),
+    edges:PB.edges.map(e=>({ from:e.from, fromPort:e.fromPort, to:e.to, toPort:e.toPort })) };
+}
+function deserialize(patch){
+  if(!patch||!Array.isArray(patch.nodes)) return false;
+  const wasRunning=PB.running; if(wasRunning) stop();
+  clearGraph();
+  const map={};                                          // saved id -> rebuilt id (PB.seq differs)
+  for(const sn of patch.nodes){
+    if(!NODE_DEFS[sn.type]) continue;
+    const n=addNode(sn.type, sn.x||40, sn.y||40, sn.params);
+    if(sn.vis) n.vis=sn.vis; if(sn.editMode) n.editMode=sn.editMode;
+    map[sn.id]=n.id;
+    if(sn.collapsed){ n.collapsed=true; const b=n.el&&n.el.querySelector(".pb-node__body"); if(b) b.style.display="none";
+      const t=n.el&&n.el.querySelector(".pb-node__tog"); if(t) t.textContent="▸"; }
+    if((sn.editMode||sn.vis)&&n.el){ const b=n.el.querySelector(".pb-node__body"); if(b) renderBody(n,b); if(n._edLbl) n._edLbl(); }
+  }
+  for(const se of (patch.edges||[])) if(map[se.from]&&map[se.to]) addEdge(map[se.from],se.fromPort,map[se.to],se.toPort);
+  PB.engine.recalcClock();
+  if(wasRunning) start();
+  fitView(); return true;
+}
+// localStorage named slots
+const PKEY="pb:patch:";
+function listPatches(){ const out=[];
+  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf(PKEY)===0) out.push(k.slice(PKEY.length)); }
+  return out.sort(); }
+function savePatch(name){ if(!name) return false; localStorage.setItem(PKEY+name, JSON.stringify(serialize())); return true; }
+function loadPatch(name){ const s=localStorage.getItem(PKEY+name); if(!s) return false;
+  try{ return deserialize(JSON.parse(s)); }catch(e){ console.warn("loadPatch",e); return false; } }
+function deletePatch(name){ localStorage.removeItem(PKEY+name); }
+// file export / import
+function exportPatch(){
+  const blob=new Blob([JSON.stringify(serialize(),null,1)],{type:"application/json"});
+  const url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download="patchbay-"+Date.now()+".json"; document.body.appendChild(a); a.click();
+  a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function importPatch(file,cb){
+  const r=new FileReader();
+  r.onload=()=>{ let ok=false; try{ ok=deserialize(JSON.parse(r.result)); }catch(e){ console.warn("importPatch",e); } cb&&cb(ok); };
+  r.readAsText(file);
+}
+
+// =====================================================================
 //  Rendering — DOM nodes + SVG wires
 // =====================================================================
 const canvas = () => document.getElementById("canvas");
@@ -431,4 +484,5 @@ function reflect(node,key,val,unit){
   inp.value=val; const ctl=inp.closest(".pb-ctl"), out=ctl&&ctl.querySelector(".pb-ctl__v");
   if(out) out.textContent=(Math.round(val*100)/100)+(unit||"");
 }
-PB.app={ addNode, removeNode, addEdge, removeEdge, loadSpec, start, stop, NODE_DEFS, clearGraph, drawWires, node, setParam, reflect, setSelectActive, advanceSelect };
+PB.app={ addNode, removeNode, addEdge, removeEdge, loadSpec, start, stop, NODE_DEFS, clearGraph, drawWires, node, setParam, reflect, setSelectActive, advanceSelect,
+  serialize, deserialize, listPatches, savePatch, loadPatch, deletePatch, exportPatch, importPatch };

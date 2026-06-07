@@ -26,6 +26,7 @@
   .btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);}
   .btn--play{background:var(--cyan);} .btn--play.on{background:var(--green);}
   .btn--stop{background:var(--pink);}
+  .btn--mini{font-size:8px;padding:7px 8px;box-shadow:2px 2px 0 var(--ink);border-width:2px;}
   select{font-family:var(--body);font-size:14px;padding:8px;border:3px solid var(--ink);background:var(--cream);color:var(--ink);}
   .bar__grp{display:flex;align-items:center;gap:6px;}
   .bar__lbl{font-family:var(--disp);font-size:8px;color:var(--cyan);opacity:.8;letter-spacing:1px;}
@@ -184,6 +185,13 @@
     <button class="btn btn--stop" id="stopBtn">■ stop</button>
     <div class="bar__grp"><span class="bar__lbl">load track</span>
       <select id="trackPick" autocomplete="off"></select></div>
+    <div class="bar__grp"><span class="bar__lbl">patches</span>
+      <select id="patchPick" autocomplete="off"></select>
+      <button class="btn btn--mini" id="saveBtn" title="save current patch to a named slot">save</button>
+      <button class="btn btn--mini" id="expBtn" title="export patch to a .json file">⤓</button>
+      <button class="btn btn--mini" id="impBtn" title="import a patch .json file">⤒</button>
+      <input type="file" id="impFile" accept="application/json,.json" style="display:none" />
+    </div>
     <div class="legend">
       <span><i style="background:var(--gold)"></i>clock</span>
       <span><i style="background:var(--cyan)"></i>scale</span>
@@ -243,6 +251,25 @@
 
   document.getElementById("playBtn").addEventListener("click",PB.app.start);
   document.getElementById("stopBtn").addEventListener("click",PB.app.stop);
+
+  // ---- patches: localStorage slots + file import/export ----
+  const patchPick=document.getElementById("patchPick");
+  function refreshPatches(selName){
+    patchPick.innerHTML="";
+    const ph=document.createElement("option"); ph.value=""; ph.textContent="— load patch —"; patchPick.appendChild(ph);
+    PB.app.listPatches().forEach(name=>{ const o=document.createElement("option"); o.value=name; o.textContent=name;
+      if(name===selName) o.selected=true; patchPick.appendChild(o); });
+  }
+  refreshPatches();
+  patchPick.addEventListener("change",()=>{ if(patchPick.value) PB.app.loadPatch(patchPick.value); });
+  document.getElementById("saveBtn").addEventListener("click",()=>{
+    const name=prompt("Save patch as:", patchPick.value||"my-patch"); if(!name) return;
+    PB.app.savePatch(name.trim()); refreshPatches(name.trim());
+  });
+  document.getElementById("expBtn").addEventListener("click",()=>PB.app.exportPatch());
+  const impFile=document.getElementById("impFile");
+  document.getElementById("impBtn").addEventListener("click",()=>impFile.click());
+  impFile.addEventListener("change",()=>{ if(impFile.files[0]) PB.app.importPatch(impFile.files[0],()=>refreshPatches()); impFile.value=""; });
 
   // section indicator on the play button
   PB.onBar=(absBar)=>{
