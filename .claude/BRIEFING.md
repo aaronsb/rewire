@@ -33,6 +33,7 @@ python3 -m http.server 8731   # from the repo root
 | `engine.js` | AudioContext, voice synthesis, the scheduler, modulation, capture |
 | `app.js` | Node/edge model, `NODE_DEFS`, live audio routing, spec loader, **patch save/load (serialize/deserialize)**, node+wire UI |
 | `visual.js` | **Visual creator mode** — point-and-click editors (piano/chords/motif/arrange) registered as `PB.visual` |
+| `help.js` | **Control help** — per-card `?` toggle + hover help cards; `HELP` registry + `PB.help` |
 | `tracker.js` | ScreamTracker-style pattern view (draggable, scrolling) |
 | `tracks.js` | `window.SS_TRACKS` — 33 song specs extracted from the original game |
 
@@ -89,6 +90,15 @@ best-effort inference (scale pitch classes; chord interval→quality matching).
   presets generated from a chosen key.
 - **motif** — step grid (steps × chord-tone index) + contour presets + busy rhythm.
 - **arrange** — draggable section chips + arrangement presets.
+
+## Control help (help.js)
+
+Each node header has a `?` button that toggles `pb-node--help` on the node el.
+`PB.help.ctl(el,type,key)` / `.node(el,type)` / `.tag(el,text)` attach hover
+handlers that only fire while inside an active node, showing a floating `.pb-help`
+card (styled like a node) with text from the `HELP` registry (keyed by node type;
+`_` is the node-level description). app.js tags the title + every standard control;
+visual.js tags its editor controls. New control text lives in the `HELP` registry.
 
 ## Patch save/load (app.js)
 
