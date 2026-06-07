@@ -154,7 +154,7 @@ function ensureCtx(){
   PB.ctx=ctx;
   const comp=ctx.createDynamicsCompressor();
   comp.threshold.value=-16; comp.knee.value=8; comp.ratio.value=4; comp.attack.value=.005; comp.release.value=.1;
-  PB.master=comp;
+  PB.masterBus=comp;                                  // audio bus (NOT PB.master, which is the scheduler timeline)
   PB.gate=ctx.createGain(); PB.gate.gain.value=0;
   comp.connect(PB.gate); PB.gate.connect(ctx.destination);
   PB.nodes.forEach(buildAudio);
@@ -186,7 +186,7 @@ function buildAudio(node){
       node._dly=dly; node._fb=fb;
     }
   } else if(def.audio==="out"){
-    const v=ctx.createGain(); v.gain.value=node.params.volume; v.connect(PB.master); node.audioIn=v; node._vol=v; node.audioInMap={in:v};
+    const v=ctx.createGain(); v.gain.value=node.params.volume; v.connect(PB.masterBus); node.audioIn=v; node._vol=v; node.audioInMap={in:v};
   }
   node.audioBuilt=true;
 }
