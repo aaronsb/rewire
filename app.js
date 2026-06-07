@@ -139,11 +139,21 @@ function addEdge(from,fromPort,to,toPort){
   const e={from,fromPort,to,toPort,type:t1};
   PB.edges.push(e);
   if(PB.ctx && t1==="audio") wireAudio(e);
-  drawWires(); return e;
+  drawWires(); reflectPorts(); return e;
 }
 function removeEdge(e){
   if(e._wired) unwireAudio(e);
-  PB.edges.splice(PB.edges.indexOf(e),1); drawWires();
+  PB.edges.splice(PB.edges.indexOf(e),1); drawWires(); reflectPorts();
+}
+// driver indicator: mark each INPUT port wired (external driver) vs hollow (built-in default)
+function reflectPorts(){
+  const wired=new Set(PB.edges.map(e=>e.to+"|"+e.toPort));
+  document.querySelectorAll('#canvas .pb-dot[data-dir="in"]').forEach(dot=>{
+    const on=wired.has(dot.dataset.id+"|"+dot.dataset.port);
+    dot.classList.toggle("pb-dot--wired",on);
+    const p=dot.closest(".pb-port"); if(p) p.classList.toggle("pb-port--wired",on);
+    dot.title = on ? "external driver (wired)" : "built-in default — nothing wired";
+  });
 }
 const node = id => PB.nodes.find(n=>n.id===id);
 
