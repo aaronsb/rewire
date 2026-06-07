@@ -359,13 +359,17 @@ function renderNode(n){
   // header
   const head=document.createElement("div"); head.className="pb-node__head";
   head.innerHTML=`<span>${def.title}</span>`;
+  if(window.PB.help) PB.help.node(head.querySelector("span"),n.type);   // node-level help on the title
   const tog=document.createElement("span"); tog.className="pb-node__tog"; tog.textContent=n.collapsed?"▸":"▾";
   tog.addEventListener("click",ev=>{ ev.stopPropagation(); n.collapsed=!n.collapsed; tog.textContent=n.collapsed?"▸":"▾"; body.style.display=n.collapsed?"none":""; drawWires(); });
+  const help=document.createElement("span"); help.className="pb-node__help"; help.textContent="?"; help.title="toggle control help";
+  help.addEventListener("click",ev=>{ ev.stopPropagation(); n.helpMode=!n.helpMode;
+    el.classList.toggle("pb-node--help",n.helpMode); help.classList.toggle("on",n.helpMode); if(!n.helpMode&&window.PB.help) PB.help.hide(); });
   const clone=document.createElement("span"); clone.className="pb-node__clone"; clone.textContent="❐"; clone.title="clone";
   clone.addEventListener("click",ev=>{ ev.stopPropagation(); cloneNode(n); });
   const del=document.createElement("span"); del.className="pb-node__del"; del.textContent="✕";
   del.addEventListener("click",ev=>{ ev.stopPropagation(); removeNode(n); });
-  head.appendChild(tog);
+  head.appendChild(tog); head.appendChild(help);
   if(window.PB.visual && PB.visual.has(n.type)){               // text/visual editor toggle
     const ed=document.createElement("span"); ed.className="pb-node__edit"; ed.title="text / visual editor";
     const setLbl=()=>ed.textContent = n.editMode==="visual" ? "T" : "▦";
@@ -435,6 +439,7 @@ function controlEl(n,c){
       catch(e){ ta.classList.add("bad"); } });
     wrap.appendChild(ta);
   }
+  if(window.PB.help) PB.help.ctl(wrap,n.type,c.k);
   return wrap;
 }
 

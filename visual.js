@@ -110,6 +110,8 @@
     return s;
   }
   const set=(n,k,v)=>PB.app.setParam(n,k,v);
+  // attach hover-help to a visual control (fires only while the node's "?" is on)
+  const H=(elm,text)=>{ if(window.PB.help){ elm.setAttribute("data-h",""); PB.help.tag(elm,text); } return elm; };
 
   // ---- SCALE editor: piano + root + octaves + presets ---------------
   function scaleEditor(node){
@@ -123,18 +125,18 @@
 
     function draw(){
       wrap.innerHTML="";
-      const top=el("div","pb-vis__row");
+      const top=H(el("div","pb-vis__row"),"Root note, starting octave, and how many octaves to generate.");
       top.appendChild(sel(PC.map((n,i)=>[i,n]), s.root, v=>{ s.root=+v; commit(); draw(); }));
       top.appendChild(sel([1,2,3,4,5,6].map(o=>[o,"oct "+o]), s.oct0, v=>{ s.oct0=+v; commit(); draw(); }));
       top.appendChild(sel([1,2,3].map(n=>[n,"×"+n]), s.octN, v=>{ s.octN=+v; commit(); draw(); }));
       wrap.appendChild(top);
 
-      const pre=el("div","pb-vis__row");
+      const pre=H(el("div","pb-vis__row"),"Pick a named scale; it fills the keyboard for you.");
       pre.appendChild(sel(Object.keys(SCALE_PRESETS).concat("custom"), presetName(s.degrees), v=>{
         if(v!=="custom"){ s.degrees=SCALE_PRESETS[v].slice(); commit(); draw(); } }));
       wrap.appendChild(pre);
 
-      const piano=el("div","pb-piano");
+      const piano=H(el("div","pb-piano"),"Click keys to toggle which notes are in the scale. Gold outline = root.");
       for(let pc=0;pc<12;pc++){
         const deg=((pc-s.root)%12+12)%12, on=s.degrees.includes(deg);
         const k=el("div","pb-key"+(BLACK.has(pc)?" pb-key--blk":"")+(on?" pb-key--on":"")+(pc===s.root?" pb-key--root":""), PC[pc]);
@@ -163,7 +165,7 @@
 
     function draw(){
       wrap.innerHTML="";
-      const key=el("div","pb-vis__row");
+      const key=H(el("div","pb-vis__row"),"The key that progression presets are built from.");
       const keyRoot=node.vis.keyRoot==null?0:node.vis.keyRoot, keyMode=node.vis.keyMode||"major";
       key.appendChild(sel(PC.map((n,i)=>[i,n]), keyRoot, v=>{ node.vis.keyRoot=+v; }));
       key.appendChild(sel(["major","minor"], keyMode, v=>{ node.vis.keyMode=v; }));
@@ -175,7 +177,7 @@
       wrap.appendChild(key);
 
       rows.forEach((row,i)=>{
-        const r=el("div","pb-vis__row pb-chordrow");
+        const r=H(el("div","pb-vis__row pb-chordrow"),"Root note · chord quality · how many bars this chord lasts. ✕ removes it.");
         r.appendChild(sel(PC.map((n,j)=>[j,n]), row.root, v=>{ row.root=+v; commit(); draw(); }));
         r.appendChild(sel(Object.keys(CHORD_QUAL), row.quality, v=>{ row.quality=v; commit(); draw(); }));
         r.appendChild(sel([1,2,3,4].map(b=>[b,b+"b"]), row.bars||2, v=>{ row.bars=+v; commit(); }));
@@ -216,14 +218,14 @@
 
     function draw(){
       wrap.innerHTML="";
-      const ctl=el("div","pb-vis__row");
+      const ctl=H(el("div","pb-vis__row"),"Motif length (steps), and the 16th-note rhythm used in busy (+) sections.");
       ctl.appendChild(el("span","pb-vis__lbl","len"));
       ctl.appendChild(sel([4,6,8,12,16].map(n=>[n,n+""]), m.length, v=>{ setLen(+v); commit(); draw(); }));
       ctl.appendChild(sel(["chunky","galloping","syncopated","flurry","driving"], node.params.busyRhythm||"chunky",
         v=>set(node,"busyRhythm",v)));
       wrap.appendChild(ctl);
 
-      const grid=el("div","pb-seq");
+      const grid=H(el("div","pb-seq"),"Each column is a step; click a cell to set that step's note. Row = chord-tone index (bottom = root).");
       for(let r=ROWS-1;r>=0;r--){
         const row=el("div","pb-seq__row");
         for(let c=0;c<m.length;c++){
@@ -235,7 +237,7 @@
       }
       wrap.appendChild(grid);
 
-      const con=el("div","pb-vis__row pb-vis__cons");
+      const con=H(el("div","pb-vis__row pb-vis__cons"),"Generate a melodic shape — overwrites the grid above.");
       ["ascending","arch","valley","zigzag","descending","random"].forEach(name=>
         con.appendChild(btn(name,()=>{ m=contour(name,m.length); commit(); draw(); })));
       wrap.appendChild(con);
@@ -255,7 +257,7 @@
     function draw(){
       wrap.innerHTML="";
       wrap.appendChild(el("div","pb-vis__lbl","sequence (drag to reorder · click to remove)"));
-      const seq=el("div","pb-chips pb-chips--seq");
+      const seq=H(el("div","pb-chips pb-chips--seq"),"Your section order — each step lasts 8 bars. Drag chips to reorder, click one to remove it.");
       steps.forEach((s,i)=>{
         const c=el("div","pb-chip pb-chip--"+(s.replace("+","")) ,s); c.draggable=true; c.title="remove";
         c.addEventListener("click",e=>{ e.stopPropagation(); steps.splice(i,1); commit(); draw(); });
@@ -268,7 +270,7 @@
       wrap.appendChild(seq);
 
       wrap.appendChild(el("div","pb-vis__lbl","add section"));
-      const pal=el("div","pb-chips");
+      const pal=H(el("div","pb-chips"),"Click a section to append it to the sequence. + variants are the busy versions.");
       SECTIONS.forEach(s=>{ const c=el("div","pb-chip pb-chip--add pb-chip--"+(s.replace("+","")),s);
         c.addEventListener("click",e=>{ e.stopPropagation(); steps.push(s); commit(); draw(); }); pal.appendChild(c); });
       wrap.appendChild(pal);
