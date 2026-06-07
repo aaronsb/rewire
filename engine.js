@@ -252,25 +252,30 @@ function emitLead(out,t,chord,bInSec,e,sec,scale,motif,p,env){
   }
   // ---- default: motif (faithful to the original 3-section behaviour) ----
   const C2=blockChordIdx(chord);             // for per-chord motif rows
+  // the base motif (what the visual editor / a palette motif node writes) is the
+  // fallback for any section that lacks its own variant — so a single drawn motif
+  // is heard in EVERY section, not just 'tonal'. Presets that define the variants
+  // are unaffected; a lead with no motif wired (base null) keeps the hardcoded runs.
+  const base=pickRow(motif&&motif.leadMotif,C2);
   if(sec.kind==="tonal"){
     const row=pickRow(motif&&motif.leadMotif,C2)||[0,1,2,3,2,1,0,1];
     if(sec.busy){ const grid=BUSY[(motif&&motif.busyRhythm)||"chunky"], steps=e===0?grid.bar0:grid.bar1;
-      lay((pickRow(motif&&motif.leadMotifBusy,C2)||[0,1,2,3,3,2,1,0,1,2]).map(i=>pool[i]),steps); }
+      lay((pickRow(motif&&motif.leadMotifBusy,C2)||base||[0,1,2,3,3,2,1,0,1,2]).map(i=>pool[i]),steps); }
     else eighths(row.map(i=>pool[i]));
   } else if(sec.kind==="var"){
     const rv=pickRow(motif&&motif.leadMotifVar,C2), rvb=pickRow(motif&&motif.leadMotifVarBusy,C2);
     if(sec.busy){ const grid=BUSY[(motif&&motif.busyRhythm)||"chunky"], steps=e===0?grid.bar0:grid.bar1;
-      let f= rvb?rvb.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[1],q[2],q[1],q[0],q[1],q[2]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1],q[2],lastNote];
+      let f= rvb?rvb.map(i=>pool[i]): base?base.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[1],q[2],q[1],q[0],q[1],q[2]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1],q[2],lastNote];
       if(e===1) f[f.length-1]=lastNote; lay(f,steps); }
-    else { let seq= rv?rv.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],lastNote];
+    else { let seq= rv?rv.map(i=>pool[i]): base?base.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],lastNote];
       if(rv&&e===1) seq[seq.length-1]=lastNote; eighths(seq); }
   } else {                                     // build
     const rb=pickRow(motif&&motif.leadMotifBuild,C2), rbb=pickRow(motif&&motif.leadMotifBuildBusy,C2);
-    let seq= rb?rb.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],lastNote];
+    let seq= rb?rb.map(i=>pool[i]): base?base.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],lastNote];
     if(rb&&e===1) seq[seq.length-1]=lastNote;
     if(bInSec===SECT_BARS-1){ for(let n=0;n<4;n++) osc(out,seq[n]*mult,t+n*hb+swingOff(n*2,spb,sw),hb*.85,wave,G); return; }
     if(sec.busy){ const grid=BUSY[(motif&&motif.busyRhythm)||"chunky"], steps=e===0?grid.bar0:grid.bar1;
-      let f= rbb?rbb.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[1],q[2],q[1],q[0],q[1],q[2]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1],q[2],lastNote];
+      let f= rbb?rbb.map(i=>pool[i]): base?base.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[1],q[2],q[1],q[0],q[1],q[2]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1],q[2],lastNote];
       if(e===1) f[f.length-1]=lastNote; lay(f,steps); }
     else eighths(seq);
   }
@@ -405,6 +410,19 @@ function modLoop(){
     if(e.type!=="mod") continue;
     const s=PB.nodes.find(n=>n.id===e.from), t=PB.nodes.find(n=>n.id===e.to);
     if(s&&t) applyMod(t,e.toPort,modValue(s,now));
+  }
+  // signal-activity blink: when a captured note crosses real playback time, flash
+  // the emitting voice's wired input ports (throttled so dense parts shimmer
+  // instead of strobe). Driven off ctx.currentTime so it lines up with the sound.
+  if(PB.running && PB.ctx){
+    const tnow=PB.ctx.currentTime;
+    for(const node of PB.nodes){
+      const arr=PB.events[node.id]; const since=node._sigT||0; node._sigT=tnow;
+      if(!arr||!arr.length) continue;
+      let fired=false;
+      for(let i=arr.length-1;i>=0;i--){ const tt=arr[i].t; if(tt<=since) break; if(tt<=tnow){ fired=true; break; } }
+      if(fired && tnow-(node._lastPulse||0)>=0.07){ node._lastPulse=tnow; if(PB.app&&PB.app.pulseInputs) PB.app.pulseInputs(node.id); }
+    }
   }
   // routers advance on real playback time (follows divided clocks), switching
   // exactly when the bar plays rather than during lookahead scheduling.
