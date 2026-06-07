@@ -1,5 +1,5 @@
 /* =====================================================================
-   Patchbay VISUAL creator mode — point-and-click editors for the typed
+   Rewire VISUAL creator mode — point-and-click editors for the typed
    entry nodes (scale / chords / motif / arrange). Each editor writes back
    to the SAME params the engine already reads (scaleHz, chords, leadMotif,
    steps), so the engine needs zero changes. A per-node header toggle

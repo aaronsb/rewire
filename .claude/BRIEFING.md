@@ -1,19 +1,16 @@
-# Patchbay — Project Briefing
+# Rewire — Project Briefing
 
 A browser-based **modular synthesizer / node patcher**. You wire together blocks
 (clock, scale, chords, voices, effects, modulators) with cables; the wiring is
 **live Web Audio routing**, so unplugging a cable silences that path instantly.
 It plays evolving, fully-synthesized music — no samples, no build step.
 
-## Origin (short)
+## Concept (short)
 
-It started as a study of the procedural music engine inside the game *Sounds
-Smashing* (every kick/snare/bassline/melody is synthesized at runtime from a
-small "song spec" of bpm + scale + chords + note-index motifs). We extracted
-that engine, then reimagined it as a **modular patch-bay**: each part of the spec
-became a wireable node. The 33 original game tracks ship as loadable presets
-(`tracks.js`). The exploratory game-analysis work lives in the parent directory
-and is **not** part of this repo.
+Each part of a compact "song spec" — bpm + scale + chords + note-index motifs
+(every kick/snare/bassline/melody is synthesized at runtime) — becomes a
+**wireable node**. You patch them together and the graph plays. 33 ready-made
+tracks ship as loadable presets (`tracks.js`).
 
 ## Run it
 
@@ -35,7 +32,7 @@ python3 -m http.server 8731   # from the repo root
 | `visual.js` | **Visual creator mode** — point-and-click editors (piano/chords/motif/arrange) registered as `PB.visual` |
 | `help.js` | **Control help** — per-card `?` toggle + hover help cards; `HELP` registry + `PB.help` |
 | `tracker.js` | ScreamTracker-style pattern view (draggable, scrolling) |
-| `tracks.js` | `window.SS_TRACKS` — 33 song specs extracted from the original game |
+| `tracks.js` | `window.SS_TRACKS` — 33 song specs shipped as loadable presets |
 
 All four scripts run in global scope and coordinate through `window.PB`
 (`PB.nodes`, `PB.edges`, `PB.ctx`, `PB.clock`, `PB.engine`, `PB.app`, `PB.caps`,

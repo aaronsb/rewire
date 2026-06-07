@@ -1,4 +1,4 @@
-# Patchbay
+# Rewire
 
 A browser-based **modular synthesizer**. Wire blocks together — clock, scale,
 chords, voices, effects, modulators — with cables, and hear it play. The wiring
@@ -30,15 +30,14 @@ python3 -m http.server 8731
 - **Arrange** node for custom song-section sequences.
 - **Select** router to A/B between effects, optionally clock-triggered.
 - A scrolling **tracker** view of the live pattern.
+- **Visual creator mode** — build scales/chords/motifs/arrangements by clicking
+  (piano keyboard, progression builder, step grid) instead of typing Hz or JSON.
+- **Save / load patches** — localStorage slots + `.json` export/import.
+- Per-card **`?` help** — hover any control for an explanation.
 - **33 preset tracks** (`tracks.js`) loadable from the top bar.
 
 ## Docs
 
 - `.claude/BRIEFING.md` — architecture & how it all works.
-- `.claude/ROADMAP.md` — what's next (visual creator mode, save/load, filter, …).
-
-## Lineage
-
-The synthesis engine began as a study of the procedural music in the game
-*Sounds Smashing*, then grew into its own modular instrument. The original game
-tracks ship as presets.
+- `.claude/ROADMAP.md` — what's next (MULT generalization, LLM live-performance
+  agent, recording/export, …).

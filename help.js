@@ -1,5 +1,5 @@
 /* =====================================================================
-   Patchbay control HELP — a per-card "?" toggle that, when active, shows
+   Rewire control HELP — a per-card "?" toggle that, when active, shows
    an offset help card (styled like the nodes) on hover over any control.
    Registry below is keyed by node type; "_" is the node-level description.
    PB.help.ctl/tag attach hover handlers; they only fire while the owning

@@ -1,4 +1,4 @@
-# Patchbay — Roadmap / Next Work
+# Rewire — Roadmap / Next Work
 
 Ordered roughly by value × readiness. Each item notes the approach so a future
 session can pick it up without re-deriving.

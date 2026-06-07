@@ -1,5 +1,5 @@
 /* =====================================================================
-   Patchbay app — node/edge model, LIVE audio routing, spec loader, and
+   Rewire app — node/edge model, LIVE audio routing, spec loader, and
    the draggable node + wire UI. Audio synthesis lives in engine.js.
    ===================================================================== */
 
@@ -336,7 +336,7 @@ function deletePatch(name){ localStorage.removeItem(PKEY+name); }
 function exportPatch(){
   const blob=new Blob([JSON.stringify(serialize(),null,1)],{type:"application/json"});
   const url=URL.createObjectURL(blob), a=document.createElement("a");
-  a.href=url; a.download="patchbay-"+Date.now()+".json"; document.body.appendChild(a); a.click();
+  a.href=url; a.download="rewire-"+Date.now()+".json"; document.body.appendChild(a); a.click();
   a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function importPatch(file,cb){

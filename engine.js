@@ -1,8 +1,8 @@
 /* =====================================================================
-   Patchbay audio engine — a graph-driven, LIVE-routed reimagining of the
-   Sounds Smashing synth. Each voice is a node; wiring = real Web Audio
-   connections; each voice exposes a STYLE dropdown with several algorithms
-   so the once-monotonic bass (and everything else) can be played with.
+   Rewire audio engine — a graph-driven, LIVE-routed modular synth. Each
+   voice is a node; wiring = real Web Audio connections; each voice exposes
+   a STYLE dropdown with several algorithms so the once-monotonic bass (and
+   everything else) can be played with.
 
    Shared state + the node/edge model live on window.PB (see app.js).
    This file owns: AudioContext, the scheduler, and the voice synths.
