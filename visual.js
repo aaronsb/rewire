@@ -98,6 +98,17 @@
   }
   function btn(txt,on,cls){ const b=el("button",(cls||"")+" pb-vis__btn",txt); b.type="button";
     b.addEventListener("click",e=>{ e.stopPropagation(); on(); }); return b; }
+  // a one-shot "apply preset" dropdown: a sticky placeholder is always the shown
+  // value, so picking ANY preset always fires change (and re-picking the same one
+  // works too). Plain sel() with value "" desyncs — the browser shows option[0]
+  // while state is elsewhere, so re-selecting that option is a silent no-op.
+  function presetSel(label,opts,on){
+    const s=el("select"); const ph=el("option",null,label); ph.value=""; ph.disabled=true; s.appendChild(ph);
+    opts.forEach(o=>{ const op=el("option",null,o); op.value=o; s.appendChild(op); });
+    s.value="";
+    s.addEventListener("change",()=>{ const v=s.value; s.value=""; if(v) on(v); });
+    return s;
+  }
   const set=(n,k,v)=>PB.app.setParam(n,k,v);
 
   // ---- SCALE editor: piano + root + octaves + presets ---------------
@@ -156,7 +167,7 @@
       const keyRoot=node.vis.keyRoot==null?0:node.vis.keyRoot, keyMode=node.vis.keyMode||"major";
       key.appendChild(sel(PC.map((n,i)=>[i,n]), keyRoot, v=>{ node.vis.keyRoot=+v; }));
       key.appendChild(sel(["major","minor"], keyMode, v=>{ node.vis.keyMode=v; }));
-      key.appendChild(sel(Object.keys(PROG_PRESETS), "", v=>{
+      key.appendChild(presetSel("progression…", Object.keys(PROG_PRESETS), v=>{
         const dia=DIATONIC[node.vis.keyMode||"major"], kr=node.vis.keyRoot||0;
         rows=PROG_PRESETS[v].map(di=>({ root:(kr+dia.deg[di])%12, oct:3, quality:dia.qual[di], bars:2 }));
         commit(); draw(); }));
@@ -263,7 +274,7 @@
       wrap.appendChild(pal);
 
       const pre=el("div","pb-vis__row");
-      pre.appendChild(sel(Object.keys(ARRANGE_PRESETS),"",v=>{ steps=ARRANGE_PRESETS[v].slice(); commit(); draw(); }));
+      pre.appendChild(presetSel("preset…", Object.keys(ARRANGE_PRESETS), v=>{ steps=ARRANGE_PRESETS[v].slice(); commit(); draw(); }));
       wrap.appendChild(pre);
     }
     draw(); return wrap;
