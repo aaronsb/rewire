@@ -255,7 +255,11 @@
     const b=document.createElement("button"); b.className="padd padd--"+def.cls;
     b.innerHTML=`<span class="padd__i">${ICONS[type]||"●"}</span><span class="padd__l">${def.title}</span>`;
     b.addEventListener("click",()=>{ const c=cascade++%8;
-      PB.app.addNode(type, 60+c*24+cv.scrollLeft, 60+c*30+cv.scrollTop); PB.app.drawWires(); });
+      // spawn into the CENTER of the current viewport (cascaded), not the top-left
+      // corner where the default node column lives — else new nodes hide under it.
+      const x=cv.scrollLeft + Math.max(40, cv.clientWidth/2 - 105) + c*26;
+      const y=cv.scrollTop + Math.max(40, cv.clientHeight/3 - 40) + c*30;
+      PB.app.addNode(type, x, y); PB.app.drawWires(); });
     pal.appendChild(b);
   });
 
