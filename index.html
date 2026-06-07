@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sounds Smashing — Patchbay</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#FFE600;--cyan:#00E5FF;--pink:#FF3B6B;--green:#7be36b;--orange:#ff9d3a;
+    --bg:#1a1040;--panel:#FFE600;--ink:#0a0820;--text:#1a1040;--cream:#fff4d6;
+    --disp:'Press Start 2P',monospace; --body:'Silkscreen',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);
+    background-image:radial-gradient(circle,rgba(255,230,0,.05) 1.5px,transparent 2px);background-size:28px 28px;
+    font-family:var(--body);color:#e7e2ff;}
+  body{display:flex;flex-direction:column;}
+  /* ---- top toolbar ---- */
+  #bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;
+    background:var(--bg);border-bottom:4px solid var(--ink);position:relative;z-index:10;}
+  #bar h1{font-family:var(--disp);font-size:14px;color:var(--gold);
+    -webkit-text-stroke:2px var(--ink);paint-order:stroke;letter-spacing:1px;margin:0 8px 0 0;}
+  .btn{font-family:var(--disp);font-size:11px;padding:10px 14px;border:3px solid var(--ink);
+    box-shadow:3px 3px 0 var(--ink);cursor:pointer;text-transform:uppercase;letter-spacing:1px;background:var(--cream);color:var(--ink);}
+  .btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);}
+  .btn--play{background:var(--cyan);} .btn--play.on{background:var(--green);}
+  .btn--stop{background:var(--pink);}
+  select{font-family:var(--body);font-size:14px;padding:8px;border:3px solid var(--ink);background:var(--cream);color:var(--ink);}
+  .bar__grp{display:flex;align-items:center;gap:6px;}
+  .bar__lbl{font-family:var(--disp);font-size:8px;color:var(--cyan);opacity:.8;letter-spacing:1px;}
+  .pal{display:flex;gap:5px;flex-wrap:wrap;}
+  .pal .btn{font-size:8px;padding:7px 8px;box-shadow:2px 2px 0 var(--ink);border-width:2px;}
+  .legend{display:flex;gap:10px;margin-left:auto;font-family:var(--body);font-size:12px;align-items:center;}
+  .legend i{display:inline-block;width:16px;height:4px;margin-right:4px;vertical-align:middle;}
+
+  /* ---- left palette + canvas + wires ---- */
+  #main{flex:1 1 auto;display:flex;min-height:0;}
+  #palette{width:150px;flex:none;overflow-y:auto;background:var(--bg);border-right:4px solid var(--ink);
+    display:flex;flex-direction:column;gap:6px;padding:8px 7px;}
+  .padd{display:flex;align-items:center;gap:8px;border:3px solid var(--ink);cursor:pointer;padding:8px 7px;
+    box-shadow:2px 2px 0 var(--ink);font-family:var(--disp);font-size:11px;letter-spacing:.5px;color:var(--ink);text-transform:uppercase;}
+  .padd:active{transform:translate(2px,2px);box-shadow:none;}
+  .padd__i{font-family:'Segoe UI Symbol',system-ui,sans-serif;font-size:17px;line-height:1;width:18px;text-align:center;}
+  .padd__l{flex:1;}
+  .padd--clock{background:var(--gold);} .padd--data{background:var(--cyan);}
+  .padd--voice{background:var(--pink);} .padd--fx{background:var(--green);}
+  .padd--mod{background:#c47bff;} .padd--out{background:#dfe7ff;} .padd--select{background:#5fc3ff;}
+  .padd--arrange{background:var(--orange);}
+  #canvas{position:relative;flex:1 1 auto;overflow:auto;}
+  #wires{position:absolute;top:0;left:0;pointer-events:none;z-index:1;}
+  .pb-wire{fill:none;stroke-width:3;pointer-events:stroke;cursor:pointer;}
+  .pb-wire--clock{stroke:var(--gold);} .pb-wire--scale{stroke:var(--cyan);}
+  .pb-wire--chords{stroke:var(--green);} .pb-wire--motif{stroke:var(--pink);}
+  .pb-wire--audio{stroke:#dfe7ff;}
+  .pb-wire--mod{stroke:#c47bff;} .pb-wire--arrange{stroke:var(--orange);}
+  .pb-wire--temp{stroke-dasharray:6 4;opacity:.8;pointer-events:none;}
+  .pb-spacer{width:2600px;height:1700px;}
+
+  /* ---- nodes ---- */
+  .pb-node{position:absolute;z-index:2;width:196px;background:var(--cream);
+    border:4px solid var(--ink);box-shadow:5px 5px 0 var(--ink);user-select:none;}
+  .pb-node__head{display:flex;align-items:center;gap:6px;padding:8px 10px;cursor:grab;
+    font-family:var(--disp);font-size:11px;color:var(--ink);letter-spacing:1px;
+    -webkit-text-stroke:.5px var(--ink);}
+  .pb-node__head>span:first-child{flex:1;}
+  .pb-node__tog,.pb-node__del{cursor:pointer;font-size:11px;opacity:.7;}
+  .pb-node__del:hover{opacity:1;color:var(--pink);}
+  .pb-node--clock .pb-node__head{background:var(--gold);}
+  .pb-node--data  .pb-node__head{background:var(--cyan);}
+  .pb-node--voice .pb-node__head{background:var(--pink);}
+  .pb-node--fx    .pb-node__head{background:var(--green);}
+  .pb-node--out   .pb-node__head{background:#dfe7ff;}
+  .pb-node--arrange .pb-node__head{background:var(--orange);}
+  .pb-node--mod   .pb-node__head{background:#c47bff;}
+  .pb-node--select .pb-node__head{background:#5fc3ff;}
+  .pb-node__ports{display:flex;justify-content:space-between;padding:6px 0;background:rgba(10,8,32,.05);}
+  .pb-ports{display:flex;flex-direction:column;gap:5px;}
+  .pb-port{display:flex;align-items:center;gap:6px;font-family:var(--body);font-size:12px;color:var(--ink);}
+  .pb-port--in{justify-content:flex-start;}
+  .pb-port--out{justify-content:flex-end;}
+  .pb-dot{width:13px;height:13px;border:2px solid var(--ink);cursor:crosshair;flex-shrink:0;}
+  .pb-port--in .pb-dot{margin-left:-7px;} .pb-port--out .pb-dot{margin-right:-7px;}
+  .pb-dot--clock{background:var(--gold);} .pb-dot--scale{background:var(--cyan);}
+  .pb-dot--chords{background:var(--green);} .pb-dot--motif{background:var(--pink);}
+  .pb-dot--audio{background:#fff;} .pb-dot--mod{background:#c47bff;} .pb-dot--arrange{background:var(--orange);}
+  .pb-node__body{padding:8px 10px 10px;display:flex;flex-direction:column;gap:7px;}
+  .pb-ctl{display:flex;flex-direction:column;gap:3px;}
+  .pb-ctl__k{font-family:var(--disp);font-size:7px;color:var(--ink);opacity:.7;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;}
+  .pb-ctl__v{opacity:.9;}
+  .pb-ctl input[type=range]{width:100%;accent-color:var(--pink);}
+  .pb-ctl select{width:100%;font-size:12px;padding:4px;border-width:2px;}
+  .pb-ctl textarea{width:100%;font-family:var(--body);font-size:11px;background:var(--ink);color:var(--green);border:2px solid var(--ink);padding:5px;resize:vertical;line-height:1.4;}
+  .pb-ctl textarea.bad{border-color:var(--pink);color:var(--pink);}
+  .pb-check{width:14px;height:14px;accent-color:var(--pink);}
+  .hint{position:absolute;bottom:10px;left:14px;z-index:3;font-family:var(--body);font-size:13px;
+    color:#cfd6dc;opacity:.6;pointer-events:none;}
+
+  /* ---- tracker panel ---- */
+  #tracker{position:fixed;right:14px;bottom:14px;z-index:20;background:var(--ink);
+    border:4px solid var(--ink);box-shadow:6px 6px 0 rgba(0,0,0,.5);max-width:62vw;max-height:74vh;
+    display:flex;flex-direction:column;font-family:var(--body);}
+  #tracker.min .trk__grid{display:none;}
+  .trk__head{display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--gold);border-bottom:4px solid var(--ink);cursor:grab;user-select:none;}
+  .trk__head:active{cursor:grabbing;}
+  .trk__title{font-family:var(--disp);font-size:10px;color:var(--ink);letter-spacing:1px;}
+  .trk__sec{font-family:var(--disp);font-size:9px;color:var(--pink);-webkit-text-stroke:.5px var(--ink);min-width:54px;}
+  .trk__add{margin-left:auto;display:flex;gap:4px;align-items:center;font-family:var(--disp);font-size:9px;color:var(--ink);}
+  .trk__add button{font-family:var(--disp);font-size:8px;padding:5px 6px;border:2px solid var(--ink);background:var(--cyan);color:var(--ink);cursor:pointer;box-shadow:2px 2px 0 var(--ink);}
+  .trk__add button:active{transform:translate(2px,2px);box-shadow:none;}
+  .trk__min{cursor:pointer;font-size:13px;color:var(--ink);padding:0 4px;}
+  .trk__grid{overflow:auto;max-height:46vh;scrollbar-width:thin;scrollbar-color:var(--gold) #15102e;}
+  .trk__grid::-webkit-scrollbar{width:15px;height:15px;}
+  .trk__grid::-webkit-scrollbar-track{background:#15102e;border-left:3px solid var(--ink);}
+  .trk__grid::-webkit-scrollbar-thumb{background:var(--gold);border:3px solid var(--ink);}
+  .trk__grid::-webkit-scrollbar-thumb:hover{background:var(--cyan);}
+  .trk__grid::-webkit-scrollbar-corner{background:var(--ink);}
+  .trk__t{border-collapse:collapse;font-size:13px;color:#cfd6dc;}
+  .trk__t th,.trk__t td{border:1px solid #2a2450;padding:2px 7px;text-align:center;white-space:nowrap;}
+  .trk__t thead th{position:sticky;top:0;z-index:2;}
+  .trk__t tbody td{height:17px;line-height:17px;padding:0 7px;}
+  .trk__t tbody tr.odd td{background:rgba(0,229,255,.035);}
+  .trk__rn{color:#6a5a8a;font-size:11px;background:#15102e;position:sticky;left:0;}
+  .trk__ch{background:#241b48;vertical-align:top;}
+  .trk__ch--d .trk__cn{color:var(--orange);} .trk__ch--b .trk__cn{color:var(--pink);}
+  .trk__ch--l .trk__cn{color:var(--cyan);}   .trk__ch--p .trk__cn{color:var(--green);}
+  .trk__cn{font-family:var(--disp);font-size:8px;letter-spacing:1px;padding:3px 0;text-transform:uppercase;}
+  .trk__cb{display:flex;gap:2px;justify-content:center;padding-bottom:3px;}
+  .trk__cb button{font-family:var(--disp);font-size:7px;width:16px;height:16px;padding:0;border:1px solid #4a4070;background:#15102e;color:#9c8fc0;cursor:pointer;}
+  .trk__cb button.on{background:var(--pink);color:var(--ink);border-color:var(--ink);}
+  .trk__cb button:last-child{color:#b06;}
+  .trk__cell{min-width:42px;font-variant-numeric:tabular-nums;letter-spacing:1px;color:#bcd;}
+  .trk__t tbody tr.beat .trk__rn{color:var(--gold);}
+  .trk__t tbody tr.beat td{background:rgba(255,230,0,.04);}
+  .trk__t tbody tr.play td{background:var(--pink)!important;color:var(--ink);font-weight:bold;}
+  .trk__t tbody tr.play .trk__rn{background:var(--gold);color:var(--ink);}
+</style>
+</head>
+<body>
+  <div id="bar">
+    <h1>PATCHBAY</h1>
+    <button class="btn btn--play" id="playBtn">▶ play</button>
+    <button class="btn btn--stop" id="stopBtn">■ stop</button>
+    <div class="bar__grp"><span class="bar__lbl">load track</span>
+      <select id="trackPick" autocomplete="off"></select></div>
+    <div class="legend">
+      <span><i style="background:var(--gold)"></i>clock</span>
+      <span><i style="background:var(--cyan)"></i>scale</span>
+      <span><i style="background:var(--green)"></i>chords</span>
+      <span><i style="background:var(--pink)"></i>motif</span>
+      <span><i style="background:#dfe7ff"></i>audio</span>
+      <span><i style="background:#c47bff"></i>mod</span>
+      <span><i style="background:var(--orange)"></i>arrange</span>
+    </div>
+  </div>
+  <div id="main">
+    <div id="palette"></div>
+    <div id="canvas">
+      <div class="pb-spacer"></div>
+      <svg id="wires"></svg>
+    </div>
+  </div>
+  <div class="hint">drag a port dot → another to wire · click a wire to cut · double-click a port to unplug · ✕ deletes a node</div>
+
+<script src="tracks.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+<script src="tracker.js"></script>
+<script>
+// ---- boot -----------------------------------------------------------
+(function(){
+  const TRACKS = window.SS_TRACKS || {};
+  const FALLBACK = {
+    bpm:120, leadWaveform:"square", drumDensity:"normal", bassDensity:"normal",
+    scaleHz:[55,61.74,65.41,73.42,82.41,87.31,98,110,123.47,130.81,146.83,164.81,174.61,196,220,246.94,261.63,293.66,329.63,349.23,392,440,493.88,523.25,587.33,659.25,698.46,783.99,880],
+    chords:[{r:220,t:261.63,f:329.63,o:440},{r:174.61,t:220,f:261.63,o:349.23},{r:130.81,t:164.81,f:196,o:261.63},{r:196,t:246.94,f:293.66,o:392}],
+    leadMotif:[0,1,2,3,2,1,0,1], reverbWetness:.15, delayFeedback:0,
+  };
+
+  // track loader dropdown
+  const pick=document.getElementById("trackPick");
+  const ids=Object.keys(TRACKS).sort();
+  if(ids.length){
+    pick.innerHTML=ids.map(id=>`<option value="${id}">${id} · ${TRACKS[id].bpm}bpm</option>`).join("");
+    pick.addEventListener("change",()=>{ const t=TRACKS[pick.value]; if(t) PB.app.loadSpec(t); });
+  } else { pick.innerHTML='<option>(no tracks.js)</option>'; pick.disabled=true; }
+
+  // node palette (left sidebar, icon + type color)
+  const ICONS={clock:"◷",scale:"▤",chords:"▦",motif:"♪",drums:"◉",bass:"▆",lead:"♫",
+    pad:"▭",reverb:"∿",delay:"⇢",output:"▶",lfo:"〜",const:"▪",arrange:"≣",select:"⇄"};
+  const pal=document.getElementById("palette"), cv=document.getElementById("canvas");
+  let cascade=0;
+  Object.keys(PB.app.NODE_DEFS).forEach(type=>{
+    const def=PB.app.NODE_DEFS[type];
+    const b=document.createElement("button"); b.className="padd padd--"+def.cls;
+    b.innerHTML=`<span class="padd__i">${ICONS[type]||"●"}</span><span class="padd__l">${def.title}</span>`;
+    b.addEventListener("click",()=>{ const c=cascade++%8;
+      PB.app.addNode(type, 60+c*24+cv.scrollLeft, 60+c*30+cv.scrollTop); PB.app.drawWires(); });
+    pal.appendChild(b);
+  });
+
+  document.getElementById("playBtn").addEventListener("click",PB.app.start);
+  document.getElementById("stopBtn").addEventListener("click",PB.app.stop);
+
+  // section indicator on the play button
+  PB.onBar=(absBar)=>{
+    const def = PB.clock.arrange==="evolve" ? PB.engine.SECTION_DEFS[Math.floor(absBar/8)%8] : {name:"loop"};
+    const b=document.getElementById("playBtn"); if(PB.running) b.textContent="▶ "+def.name;
+  };
+
+  const bootId = TRACKS["w1-default-am"] ? "w1-default-am" : (ids.length?ids[0]:null);
+  if(bootId) pick.value=bootId;
+  PB.app.loadSpec(bootId ? TRACKS[bootId] : FALLBACK);
+})();
+</script>
+</body>
+</html>
