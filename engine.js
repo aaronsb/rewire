@@ -257,15 +257,17 @@ function emitLead(out,t,chord,bInSec,e,sec,scale,motif,p,env){
   // is heard in EVERY section, not just 'tonal'. Presets that define the variants
   // are unaffected; a lead with no motif wired (base null) keeps the hardcoded runs.
   const base=pickRow(motif&&motif.leadMotif,C2);
+  const cyc=(a,len)=>a.length>=len?a:Array.from({length:len},(_,k)=>a[k%a.length]);  // cycle a motif to fill a busy grid
   if(sec.kind==="tonal"){
     const row=pickRow(motif&&motif.leadMotif,C2)||[0,1,2,3,2,1,0,1];
     if(sec.busy){ const grid=BUSY[(motif&&motif.busyRhythm)||"chunky"], steps=e===0?grid.bar0:grid.bar1;
-      lay((pickRow(motif&&motif.leadMotifBusy,C2)||base||[0,1,2,3,3,2,1,0,1,2]).map(i=>pool[i]),steps); }
+      const bz=pickRow(motif&&motif.leadMotifBusy,C2);
+      lay((bz||(base&&cyc(base,steps.length))||[0,1,2,3,3,2,1,0,1,2]).map(i=>pool[i]),steps); }
     else eighths(row.map(i=>pool[i]));
   } else if(sec.kind==="var"){
     const rv=pickRow(motif&&motif.leadMotifVar,C2), rvb=pickRow(motif&&motif.leadMotifVarBusy,C2);
     if(sec.busy){ const grid=BUSY[(motif&&motif.busyRhythm)||"chunky"], steps=e===0?grid.bar0:grid.bar1;
-      let f= rvb?rvb.map(i=>pool[i]): base?base.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[1],q[2],q[1],q[0],q[1],q[2]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1],q[2],lastNote];
+      let f= rvb?rvb.map(i=>pool[i]): base?cyc(base,steps.length).map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[1],q[2],q[1],q[0],q[1],q[2]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1],q[2],lastNote];
       if(e===1) f[f.length-1]=lastNote; lay(f,steps); }
     else { let seq= rv?rv.map(i=>pool[i]): base?base.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],lastNote];
       if(rv&&e===1) seq[seq.length-1]=lastNote; eighths(seq); }
@@ -275,7 +277,7 @@ function emitLead(out,t,chord,bInSec,e,sec,scale,motif,p,env){
     if(rb&&e===1) seq[seq.length-1]=lastNote;
     if(bInSec===SECT_BARS-1){ for(let n=0;n<4;n++) osc(out,seq[n]*mult,t+n*hb+swingOff(n*2,spb,sw),hb*.85,wave,G); return; }
     if(sec.busy){ const grid=BUSY[(motif&&motif.busyRhythm)||"chunky"], steps=e===0?grid.bar0:grid.bar1;
-      let f= rbb?rbb.map(i=>pool[i]): base?base.map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[1],q[2],q[1],q[0],q[1],q[2]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1],q[2],lastNote];
+      let f= rbb?rbb.map(i=>pool[i]): base?cyc(base,steps.length).map(i=>pool[i]): e===0?[q[0],q[1],q[2],q[3],q[1],q[2],q[1],q[0],q[1],q[2]]:[q[0],q[1],q[2],q[3],q[2],q[1],q[0],q[1],q[2],lastNote];
       if(e===1) f[f.length-1]=lastNote; lay(f,steps); }
     else eighths(seq);
   }
