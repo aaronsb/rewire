@@ -1,5 +1,9 @@
 # Rewire
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![No build step](https://img.shields.io/badge/build-none%20·%20plain%20JS-success.svg)](#run)
+[![Web Audio](https://img.shields.io/badge/Web%20Audio-API-FF3B6B.svg)](#)
+
 A browser-based **modular synthesizer**. Wire blocks together — clock, scale,
 chords, voices, effects, modulators — with cables, and hear it play. The wiring
 is **live Web Audio routing**: unplug a cable and that path goes silent. No
