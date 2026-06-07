@@ -1,0 +1,53 @@
+# ADR Configuration
+# Defines domain numbering and validation rules.
+# Used by: docs/scripts/adr
+
+# Project name (used in generated index)
+project_name: Rewire
+
+# Domain Number Series — mirror the codebase's natural seams.
+domains:
+  engine:
+    range: [100, 199]
+    name: Engine
+    description: Audio context, voice synthesis, the scheduler, clock/timing model, modulation, capture (engine.js)
+    folder: engine
+
+  graph:
+    range: [200, 299]
+    name: Graph Model
+    description: Node/edge model, NODE_DEFS, port types, live audio routing, connection rules, serialization (app.js)
+    folder: graph
+
+  ui:
+    range: [300, 399]
+    name: UI
+    description: Visual creator mode, control help, tracker, palette, node/wire UI (visual.js, help.js, tracker.js)
+    folder: ui
+
+  meta:
+    range: [400, 499]
+    name: Meta
+    description: Process, tooling, scaffolding, roadmap direction, cross-cutting decisions
+    folder: meta
+
+# Valid ADR statuses
+statuses:
+  - Draft         # Initial creation, not yet proposed
+  - Proposed      # Under discussion/review
+  - Accepted      # Approved and ready for implementation
+  - Superseded    # Replaced by another ADR
+  - Deprecated    # No longer relevant
+
+# Default values for new ADRs
+defaults:
+  deciders: []    # Empty = auto-detect from gh/git
+  status: Draft
+
+# Legacy ADR range (pre-domain numbering)
+legacy:
+  range: [1, 99]
+  label: "Legacy"
+
+# Viewer command for `adr view` (use {file} as placeholder)
+viewer: cat {file}
