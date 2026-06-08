@@ -5,5 +5,8 @@
   "chords": [{"r":220,"t":261.63,"f":329.63,"o":440},{"r":174.61,"t":220,"f":261.63,"o":349.23},{"r":130.81,"t":164.81,"f":196,"o":261.63},{"r":196,"t":246.94,"f":293.66,"o":392}],
   "leadMotif": [0,1,2,3,2,1,0,1],
   "leadMotifBusy": [0,1,2,3,3,2,1,0,1,2],
-  "leadWaveform": "square"
+  "leadWaveform": "triangle",
+  "bassStyle": "octaves",
+  "bassWave": "square",
+  "leadStyle": "motif"
 }

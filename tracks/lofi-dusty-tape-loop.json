@@ -17,5 +17,8 @@
   "leadMotif": [0,2,3,2,1,2,0,2],
   "leadMotifBusy": [0,2,3,2,1,2,0,2,3,1],
   "leadMotifVar": [2,3,2,0,1,0,2,3],
-  "leadMotifBuild": [0,1,2,3,3,2,1,0]
+  "leadMotifBuild": [0,1,2,3,3,2,1,0],
+  "bassStyle": "sub",
+  "bassWave": "sine",
+  "leadStyle": "stab"
 }

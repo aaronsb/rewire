@@ -2,7 +2,7 @@
   "id": "w3-jenga-towers",
   "vibe": "epic",
   "bpm": 132,
-  "leadWaveform": "sawtooth",
+  "leadWaveform": "square",
   "drumDensity": "normal",
   "bassDensity": "dense",
   "busyRhythm": "driving",
@@ -14,5 +14,8 @@
   "leadMotifVar": [[0,2,3,0,2,3,0,3],[2,3,0,3,2,3,0,3],[0,3,2,3,0,3,2,3],[3,2,3,0,2,3,2,3]],
   "leadMotifVarBusy": [[0,2,3,0,2,3,0,2,3,3],[2,3,0,3,2,3,0,3,2,3],[0,3,2,3,0,3,2,3,0,3],[3,2,3,0,2,3,2,3,0,3]],
   "leadMotifBuild": [[0,1,2,3,1,2,3,3],[1,2,3,2,3,2,3,3],[0,2,3,1,2,3,2,3],[2,3,2,3,0,2,3,3]],
-  "leadMotifBuildBusy": [[0,1,2,3,1,2,3,2,3,3],[1,2,3,2,3,1,2,3,2,3],[0,2,3,1,2,3,0,2,3,3],[2,3,0,3,2,3,2,3,0,3]]
+  "leadMotifBuildBusy": [[0,1,2,3,1,2,3,2,3,3],[1,2,3,2,3,1,2,3,2,3],[0,2,3,1,2,3,0,2,3,3],[2,3,0,3,2,3,2,3,0,3]],
+  "bassStyle": "driving",
+  "bassWave": "sawtooth",
+  "leadStyle": "arp"
 }
