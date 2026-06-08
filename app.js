@@ -45,9 +45,9 @@ const NODE_DEFS = {
               {k:"fills",t:"check"},{k:"clap",t:"check"},{k:"openHat",t:"check"},
               {k:"gain",t:"range",min:0,max:1.5,step:.05}] },
   bass:  { title:"BASS", cls:"voice", audio:"voice",
-    ins:[{name:"clock",type:"clock"},{name:"chords",type:"chords"},{name:"arrange",type:"arrange"},{name:"gain",type:"mod"}], outs:[{name:"out",type:"audio"}],
+    ins:[{name:"clock",type:"clock"},{name:"chords",type:"chords"},{name:"motif",type:"motif"},{name:"arrange",type:"arrange"},{name:"gain",type:"mod"}], outs:[{name:"out",type:"audio"}],
     params:{style:"walking",wave:"square",octave:0,gain:1},
-    controls:[{k:"style",t:"select",opts:["sustain","pulse","walking","octaves","arp","offbeat","driving","sub"]},
+    controls:[{k:"style",t:"select",opts:["sustain","pulse","walking","octaves","arp","offbeat","driving","sub","motif"]},
               {k:"wave",t:"select",opts:["square","sawtooth","triangle","sine"]},
               {k:"octave",t:"range",min:-2,max:2,step:1},
               {k:"gain",t:"range",min:0,max:1.5,step:.05}] },
@@ -301,6 +301,7 @@ function loadSpec(spec){
   for(const v of [bass,lead,pad]) addEdge(chords.id,"chords",v.id,"chords");
   addEdge(scale.id,"scale",lead.id,"scale");
   addEdge(motif.id,"motif",lead.id,"motif");
+  if(spec.bassStyle==="motif") addEdge(motif.id,"motif",bass.id,"motif");   // composed bassline off the same motif (ADR-103)
   // audio wiring — reflect the track's fx
   addEdge(drums.id,"out",out.id,"in");
   addEdge(bass.id,"out",out.id,"in");

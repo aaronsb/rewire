@@ -222,13 +222,18 @@ function emitDrums(out,t,bInSec,sec,p,env){
 // =====================================================================
 //  BASS — the headliner: 8 style algorithms instead of one root note
 // =====================================================================
-const BASS_STYLES = ["sustain","pulse","walking","octaves","arp","offbeat","driving","sub"];
-function emitBass(out,t,chord,bInSec,sec,p,env){
+const BASS_STYLES = ["sustain","pulse","walking","octaves","arp","offbeat","driving","sub","motif"];
+function emitBass(out,t,chord,bInSec,sec,p,env,motif){
   const spb=env.spb, bar=env.bar, q=chordTones(chord);
   const div=(chord.r>200?4:2)/Math.pow(2,p.octave||0);   // octave knob shifts up/down
   const w=p.wave||"square", gain=.2*p.gain, lo=f=>f/div;
   const N=(f,tt,d,sh)=>osc(out,lo(f),tt,d,w,gain,sh);
   switch(p.style){
+    case "motif": {   // composed bassline: play a wired MOTIF's indices as chord tones, steady eighths (ADR-103)
+      const row=pickRow(motif&&motif.leadMotif,chord.__idx||0);
+      if(!row||!row.length){ const seq=[q[0],q[1],q[2],q[3],q[3],q[2],q[1],q[0]];   // nothing wired -> fall back to walking
+        for(let i=0;i<8;i++) N(seq[i],t+i*(spb/2),spb*.5,"sustain"); break; }
+      for(let i=0;i<8;i++) N(q[row[i%row.length]%q.length],t+i*(spb/2),spb*.45,"pluck"); break; }
     case "sustain": N(q[0],t,bar*.95,"sustain"); break;
     case "pulse":   for(let b=0;b<4;b++) N(q[0],t+b*spb,spb*.6,"pluck"); break;
     case "octaves": for(let i=0;i<8;i++){ const f=(i%2===0)?q[0]:q[0]*2; N(f,t+i*(spb/2),spb*.45,"pluck"); } break;
@@ -378,7 +383,7 @@ function emitVoiceBar(node,t,barIdx,env){
     if(!chords||!chords.length) return;        // pitched voices need a chord source
     const blk=blockAt(chords,bInSec); if(!blk) return;
     const chord=Object.assign({},blk.chord,{__idx:blk.chordIdx}), e=bInSec-blk.startBar;
-    if(node.type==="bass") emitBass(node.audioOut,t,chord,bInSec,sec,node.params,env);
+    if(node.type==="bass"){ const bmo=inputSrc(node,"motif"); emitBass(node.audioOut,t,chord,bInSec,sec,node.params,env,bmo?bmo.params:null); }
     else if(node.type==="pad"){ if(sec.kind!=="tonal") emitPad(node.audioOut,t,chord,e,blk.bars,sec,node.params,env); }
     else { const scSrc=inputSrc(node,"scale"), moSrc=inputSrc(node,"motif");
       emitLead(node.audioOut,t,chord,bInSec,e,sec,scSrc?scSrc.params.scaleHz:null,moSrc?moSrc.params:null,node.params,env); }
