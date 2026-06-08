@@ -111,10 +111,28 @@ function swingOff(step,spb,amt){
   return Math.max(0,Math.min(100,amt))/100*(spb/6);
 }
 
+// ---- SHAPER humanize + scheduling guard (ADR-100) -------------------
+// _hum is the per-voice-bar humanize amount (0..1), set in emitVoiceBar from the
+// resolved clock. hjit/hamp are applied at EVERY note-producing primitive (osc +
+// the drum hits + the sub-bass path) — the choke points every voice passes
+// through — perturbing each hit's timing + velocity. Jitter is fixed absolute
+// time (±20ms), NOT tempo-relative, so it reads stronger on fast / MULT-multiplied
+// branches (intentional; revisit with ADR-102 if it bites).
+// hjit ALSO clamps every note out of the past: a negative SHAPER nudge (phase) or
+// a downward jitter could otherwise land before ctx.currentTime and flam the
+// envelope on a voice's first hit after add/un-mute (the guard ADR-100 required).
+let _hum=0;
+function hjit(t){
+  if(_hum>0) t += (Math.random()*2-1)*_hum*0.02;        // up to ±20ms timing jitter
+  return Math.max(t, C().currentTime + 0.002);          // never schedule in the past
+}
+function hamp(a){ return _hum>0 ? a*(1+(Math.random()*2-1)*_hum*0.3) : a; }    // up to ±30% velocity
+
 // ---- low-level voices (oscillator / noise + envelope) ---------------
 // All connect into `out` (a node's audioOut gain) so routing is live.
 function osc(out,freq,t,dur,wave,gain,shape){
   if(gain<=1e-6||!isFinite(freq)||freq<=0) return;
+  t=hjit(t); gain=hamp(gain);
   const ctx=C(), o=ctx.createOscillator(), g=ctx.createGain();
   o.type=wave; o.frequency.value=freq;
   g.gain.setValueAtTime(1e-4,t);
@@ -129,6 +147,7 @@ function noiseBuf(dur){
   const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; return b;
 }
 function kick(out,t,amp,kit){
+  t=hjit(t); amp=hamp(amp);
   const ctx=C(), o=ctx.createOscillator(), g=ctx.createGain(); o.type="triangle";
   o.frequency.setValueAtTime(kit.kickPitch,t); o.frequency.exponentialRampToValueAtTime(kit.kickEnd,t+.06);
   g.gain.setValueAtTime(1e-4,t); g.gain.linearRampToValueAtTime(amp,t+.003); g.gain.exponentialRampToValueAtTime(1e-4,t+kit.kickDecay);
@@ -136,6 +155,7 @@ function kick(out,t,amp,kit){
   capDrum(t,"K");
 }
 function snare(out,t,amp,kit){
+  t=hjit(t); amp=hamp(amp);
   const ctx=C(), s=ctx.createBufferSource(); s.buffer=noiseBuf(Math.max(.05,kit.snareDecay+.02));
   const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=kit.snareFreq; bp.Q.value=1;
   const g=ctx.createGain(); g.gain.setValueAtTime(1e-4,t); g.gain.linearRampToValueAtTime(amp,t+.002); g.gain.exponentialRampToValueAtTime(1e-4,t+kit.snareDecay);
@@ -143,6 +163,7 @@ function snare(out,t,amp,kit){
   capDrum(t,"S");
 }
 function hat(out,t,amp,kit,open){
+  t=hjit(t); amp=hamp(amp);
   const ctx=C(), dur=open?.22:.03, s=ctx.createBufferSource(); s.buffer=noiseBuf(dur);
   const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=open?Math.max(4e3,kit.hatHpf-1500):kit.hatHpf;
   const dec=open?.18:kit.hatDecay, g=ctx.createGain();
@@ -151,6 +172,7 @@ function hat(out,t,amp,kit,open){
   capDrum(t,open?"o":"h");
 }
 function clap(out,t,amp){
+  t=hjit(t); amp=hamp(amp);
   const ctx=C(), offs=[0,.012,.024,.038];
   for(let b=0;b<offs.length;b++){
     const s=ctx.createBufferSource(); s.buffer=noiseBuf(.04);
@@ -162,6 +184,7 @@ function clap(out,t,amp){
   capDrum(t,"C");
 }
 function tom(out,t,freq,amp){
+  t=hjit(t); amp=hamp(amp);
   const ctx=C(), o=ctx.createOscillator(), g=ctx.createGain(); o.type="triangle";
   o.frequency.setValueAtTime(freq*1.6,t); o.frequency.exponentialRampToValueAtTime(freq,t+.08);
   g.gain.setValueAtTime(1e-4,t); g.gain.linearRampToValueAtTime(amp,t+.003); g.gain.exponentialRampToValueAtTime(1e-4,t+.16);
@@ -216,9 +239,9 @@ function emitBass(out,t,chord,bInSec,sec,p,env){
     case "offbeat": for(let b=0;b<4;b++) N(q[0],t+b*spb+spb/2,spb*.4,"pluck"); break;
     case "driving":{ const pass=[q[0],q[0],q[0],q[2],q[0],q[0],q[2],q[1]];
       for(let i=0;i<8;i++) N(pass[i],t+i*(spb/2),spb*.42,"pluck"); break; }
-    case "sub": { const o=C().createOscillator(),g=C().createGain(); o.type="sine"; o.frequency.value=lo(q[0])/2;
-      g.gain.setValueAtTime(1e-4,t); g.gain.linearRampToValueAtTime(gain*1.4,t+.05); g.gain.setValueAtTime(gain*1.4,t+bar-.1); g.gain.exponentialRampToValueAtTime(1e-4,t+bar);
-      o.connect(g).connect(out); o.start(t); o.stop(t+bar+.05); capNote(t,freqToName(lo(q[0])/2)); break; }
+    case "sub": { const tt=hjit(t), amp=hamp(gain), o=C().createOscillator(),g=C().createGain(); o.type="sine"; o.frequency.value=lo(q[0])/2;  // inline (not osc()) -> apply hjit/hamp here for parity
+      g.gain.setValueAtTime(1e-4,tt); g.gain.linearRampToValueAtTime(amp*1.4,tt+.05); g.gain.setValueAtTime(amp*1.4,tt+bar-.1); g.gain.exponentialRampToValueAtTime(1e-4,tt+bar);
+      o.connect(g).connect(out); o.start(tt); o.stop(tt+bar+.05); capNote(tt,freqToName(lo(q[0])/2)); break; }
     default: N(q[0],t,bar*.9,"sustain");
   }
 }
@@ -308,10 +331,18 @@ function inputSrc(node,port){
 // follow a clock wire through any MULT (divider/multiplier) nodes to the real
 // clock, accumulating the rate factor -> effective {bpm, swing, enabled}.
 function resolveClock(src){
-  let factor=1, n=src, guard=0;
-  while(n && n.type==="clockmult" && guard++<16){ factor*=(parseFloat(n.params.factor)||1); n=inputSrc(n,"clock"); }
-  if(n && n.type==="clock") return {bpm:(n.params.bpm||120)*factor, swing:n.params.swing||0, enabled:n.params.enabled!==false};
-  return {bpm:120*factor, swing:0, enabled:false};   // chain never reaches a real clock -> idle
+  // walk the clock wire through MULT (rate) and SHAPER (feel) nodes, accumulating:
+  //   factor  (×, MULT)   swing (+, summed)   phase (+ sec, summed nudge)   hum (max)
+  let factor=1, swing=0, phase=0, hum=0, n=src, guard=0;
+  while(n && (n.type==="clockmult"||n.type==="shaper") && guard++<32){
+    if(n.type==="clockmult") factor*=(parseFloat(n.params.factor)||1);
+    else { swing+=(+n.params.swing||0); phase+=(+n.params.nudge||0)/1000; hum=Math.max(hum,(+n.params.humanize||0)/100); }
+    n=inputSrc(n,"clock");
+  }
+  if(guard>=32) console.warn("resolveClock: clock chain too long or cyclic (>32 nodes) — voice idled", src&&src.id);
+  const sw=s=>Math.max(0,Math.min(100,s));
+  if(n && n.type==="clock") return {bpm:(n.params.bpm||120)*factor, swing:sw((n.params.swing||0)+swing), enabled:n.params.enabled!==false, phase, humanize:hum};
+  return {bpm:120*factor, swing:sw(swing), enabled:false, phase, humanize:hum};   // chain never reaches a real clock -> idle
 }
 function tagChords(chords){ return chords.map((c,i)=>Object.assign({},c,{__idx:i})); }
 
@@ -338,6 +369,7 @@ function gsecFor(ab){
 function emitVoiceBar(node,t,barIdx,env){
   const gsec=gsecFor(barIdx);
   PB._capId = PB.track ? node.id : null;
+  _hum = env.humanize||0;                       // SHAPER humanize amount for this voice-bar
   try{
     const {sec,bInSec}=sectionFor(node,barIdx,gsec);
     if(node.type==="drums"){ emitDrums(node.audioOut,t,bInSec,sec,node.params,env); return; }
@@ -350,7 +382,7 @@ function emitVoiceBar(node,t,barIdx,env){
     else if(node.type==="pad"){ if(sec.kind!=="tonal") emitPad(node.audioOut,t,chord,e,blk.bars,sec,node.params,env); }
     else { const scSrc=inputSrc(node,"scale"), moSrc=inputSrc(node,"motif");
       emitLead(node.audioOut,t,chord,bInSec,e,sec,scSrc?scSrc.params.scaleHz:null,moSrc?moSrc.params:null,node.params,env); }
-  }catch(err){ console.warn("voice",node.type,err); } finally { PB._capId=null; }
+  }catch(err){ console.warn("voice",node.type,err); } finally { PB._capId=null; _hum=0; }
 }
 
 // Per-voice timelines: each voice runs at ITS connected clock's tempo, so
@@ -375,8 +407,9 @@ function tick(){
     if(!node.audioOut) continue;
     if(off || node.muted || (anySolo && !node.solo)){        // keep phase, emit nothing
       while(node.cursor<now+vbar*LA){ node.cursor+=vbar; node.barIdx++; } continue; }
-    const env={spb:vspb,bar:vbar,halfBeat:vspb/2,swing:C.swing};
-    while(node.cursor<now+vbar*LA){ emitVoiceBar(node,node.cursor,node.barIdx,env); node.cursor+=vbar; node.barIdx++; }
+    const env={spb:vspb,bar:vbar,halfBeat:vspb/2,swing:C.swing,humanize:C.humanize};
+    // SHAPER nudge: shift this branch's whole bar by a constant phase (lay-back / rush)
+    while(node.cursor<now+vbar*LA){ emitVoiceBar(node,node.cursor+C.phase,node.barIdx,env); node.cursor+=vbar; node.barIdx++; }
   }
   for(const k in PB.events){ const a=PB.events[k]; if(a.length>500) a.splice(0,a.length-500); }  // trim
   PB.timer=setTimeout(tick, Math.max(40, mbar*0.5*1000));

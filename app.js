@@ -17,6 +17,12 @@ const NODE_DEFS = {
     ins:[{name:"clock",type:"clock"}], outs:[{name:"clock",type:"clock"}],
     params:{factor:0.5},
     controls:[{k:"factor",t:"select",opts:["0.0625","0.125","0.25","0.5","1","2","4","8"]}] },
+  shaper:{ title:"SHAPER", cls:"clock", audio:null,        // inline clock-domain feel processor (ADR-100)
+    ins:[{name:"clock",type:"clock"}], outs:[{name:"clock",type:"clock"}],
+    params:{swing:0,nudge:0,humanize:0},
+    controls:[{k:"swing",t:"range",min:0,max:100,step:1,unit:"%"},
+              {k:"nudge",t:"range",min:-30,max:30,step:1,unit:" ms"},
+              {k:"humanize",t:"range",min:0,max:100,step:1,unit:"%"}] },
   scale: { title:"SCALE", cls:"data", audio:null,
     ins:[], outs:[{name:"scale",type:"scale"}],
     params:{scaleHz:[]},
