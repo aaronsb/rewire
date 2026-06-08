@@ -23,6 +23,7 @@ _Audio context, voice synthesis, the scheduler, clock/timing model, modulation, 
 | [ADR-100](./engine/ADR-100-clock-shaper-node-composable-swing-nudge-humanize-in-the-clock-domain.md) | Clock shaper node: composable swing/nudge/humanize in the clock domain | Accepted |
 | [ADR-101](./engine/ADR-101-simplify-the-base-clock-externalize-swing-and-migrate-song-patch-json.md) | Simplify the base clock: externalize swing and migrate song/patch JSON | Draft |
 | [ADR-102](./engine/ADR-102-polyrhythm-helper-tight-phase-locked-clock-ratios-alongside-free-running-drift.md) | Polyrhythm helper: tight phase-locked clock ratios alongside free-running drift | Draft |
+| [ADR-103](./engine/ADR-103-bass-motif-input-composed-basslines-via-a-wired-motif-a-motif-bass-style.md) | Bass motif input: composed basslines via a wired motif + a 'motif' bass style | Accepted |
 
 ## Graph Model
 _Node/edge model, NODE_DEFS, port types, live audio routing, connection rules, serialization (app.js)_
