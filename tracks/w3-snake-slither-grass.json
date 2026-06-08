@@ -14,5 +14,8 @@
   "leadMotifVar": [2,1,0,1,2,3,2,1],
   "leadMotifVarBusy": [0,1,2,3,2,1,2,1,0,1],
   "leadMotifBuild": [0,1,2,3,2,1,2,3],
-  "leadMotifBuildBusy": [0,1,2,1,2,3,2,3,2,1]
+  "leadMotifBuildBusy": [0,1,2,1,2,3,2,3,2,1],
+  "bassStyle": "walking",
+  "bassWave": "sine",
+  "leadStyle": "walk"
 }
