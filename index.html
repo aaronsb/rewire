@@ -237,7 +237,8 @@
 <script src="tracker.js"></script>
 <script>
 // ---- boot -----------------------------------------------------------
-(function(){
+(async function(){
+  await window.SS_TRACKS_READY;            // tracks now load async from tracks/*.json
   const TRACKS = window.SS_TRACKS || {};
   const FALLBACK = {
     bpm:120, leadWaveform:"square", drumDensity:"normal", bassDensity:"normal",

@@ -7,6 +7,7 @@ deciders:
 related:
   - ADR-100
   - ADR-102
+  - ADR-200
 ---
 
 # ADR-101: Simplify the base clock: externalize swing and migrate song/patch JSON
