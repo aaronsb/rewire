@@ -7,12 +7,24 @@
 // window.SS_TRACKS_READY : Promise that resolves to SS_TRACKS once loaded
 window.SS_TRACKS = {};
 window.SS_TRACKS_READY = (async function () {
+  // Per-track resilience: one missing/malformed file is skipped (warned), not
+  // fatal to the rest — preserves per-song isolation (ADR-200).
+  async function loadTrack(id) {
+    try {
+      const r = await fetch("tracks/" + id + ".json");
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return [id, await r.json()];
+    } catch (err) {
+      console.warn("track skipped:", id, err);
+      return null;
+    }
+  }
   try {
-    const ids = await fetch("tracks/manifest.json").then(r => r.json());
-    const specs = await Promise.all(ids.map(id =>
-      fetch("tracks/" + id + ".json").then(r => r.json()).then(spec => [id, spec])
-    ));
-    for (const [id, spec] of specs) window.SS_TRACKS[id] = spec;
+    const r = await fetch("tracks/manifest.json");
+    if (!r.ok) throw new Error("manifest HTTP " + r.status);
+    const ids = await r.json();
+    const specs = await Promise.all(ids.map(loadTrack));
+    for (const entry of specs) if (entry) window.SS_TRACKS[entry[0]] = entry[1];
   } catch (err) {
     console.error("track load failed:", err);
   }
