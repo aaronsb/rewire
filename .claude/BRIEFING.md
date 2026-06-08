@@ -18,9 +18,12 @@ No build step. Plain `<script>` tags sharing a `window.PB` global. Must be serve
 over HTTP (some browser APIs + tooling dislike `file://`):
 
 ```bash
-python3 -m http.server 8731   # from the repo root
-# open http://localhost:8731/index.html
+./serve.sh                    # from the repo root — serves + opens a browser
+# equivalently: python3 -m http.server 8731  → http://localhost:8731/index.html
 ```
+
+`file://` does not work: the per-song track loader uses `fetch` (see ADR-200),
+which browsers block on `file://`. Always serve over HTTP.
 
 ## Files
 
