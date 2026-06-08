@@ -111,12 +111,21 @@ function swingOff(step,spb,amt){
   return Math.max(0,Math.min(100,amt))/100*(spb/6);
 }
 
-// ---- SHAPER humanize (ADR-100) --------------------------------------
-// Per-voice-bar amount (0..1) set in emitVoiceBar from the resolved clock.
-// Applied at the note primitives below — the single choke points every voice
-// passes through — so it perturbs timing + velocity of each individual hit.
+// ---- SHAPER humanize + scheduling guard (ADR-100) -------------------
+// _hum is the per-voice-bar humanize amount (0..1), set in emitVoiceBar from the
+// resolved clock. hjit/hamp are applied at EVERY note-producing primitive (osc +
+// the drum hits + the sub-bass path) — the choke points every voice passes
+// through — perturbing each hit's timing + velocity. Jitter is fixed absolute
+// time (±20ms), NOT tempo-relative, so it reads stronger on fast / MULT-multiplied
+// branches (intentional; revisit with ADR-102 if it bites).
+// hjit ALSO clamps every note out of the past: a negative SHAPER nudge (phase) or
+// a downward jitter could otherwise land before ctx.currentTime and flam the
+// envelope on a voice's first hit after add/un-mute (the guard ADR-100 required).
 let _hum=0;
-function hjit(t){ return _hum>0 ? t + (Math.random()*2-1)*_hum*0.02 : t; }     // up to ±20ms timing
+function hjit(t){
+  if(_hum>0) t += (Math.random()*2-1)*_hum*0.02;        // up to ±20ms timing jitter
+  return Math.max(t, C().currentTime + 0.002);          // never schedule in the past
+}
 function hamp(a){ return _hum>0 ? a*(1+(Math.random()*2-1)*_hum*0.3) : a; }    // up to ±30% velocity
 
 // ---- low-level voices (oscillator / noise + envelope) ---------------
@@ -230,9 +239,9 @@ function emitBass(out,t,chord,bInSec,sec,p,env){
     case "offbeat": for(let b=0;b<4;b++) N(q[0],t+b*spb+spb/2,spb*.4,"pluck"); break;
     case "driving":{ const pass=[q[0],q[0],q[0],q[2],q[0],q[0],q[2],q[1]];
       for(let i=0;i<8;i++) N(pass[i],t+i*(spb/2),spb*.42,"pluck"); break; }
-    case "sub": { const o=C().createOscillator(),g=C().createGain(); o.type="sine"; o.frequency.value=lo(q[0])/2;
-      g.gain.setValueAtTime(1e-4,t); g.gain.linearRampToValueAtTime(gain*1.4,t+.05); g.gain.setValueAtTime(gain*1.4,t+bar-.1); g.gain.exponentialRampToValueAtTime(1e-4,t+bar);
-      o.connect(g).connect(out); o.start(t); o.stop(t+bar+.05); capNote(t,freqToName(lo(q[0])/2)); break; }
+    case "sub": { const tt=hjit(t), amp=hamp(gain), o=C().createOscillator(),g=C().createGain(); o.type="sine"; o.frequency.value=lo(q[0])/2;  // inline (not osc()) -> apply hjit/hamp here for parity
+      g.gain.setValueAtTime(1e-4,tt); g.gain.linearRampToValueAtTime(amp*1.4,tt+.05); g.gain.setValueAtTime(amp*1.4,tt+bar-.1); g.gain.exponentialRampToValueAtTime(1e-4,tt+bar);
+      o.connect(g).connect(out); o.start(tt); o.stop(tt+bar+.05); capNote(tt,freqToName(lo(q[0])/2)); break; }
     default: N(q[0],t,bar*.9,"sustain");
   }
 }
@@ -330,6 +339,7 @@ function resolveClock(src){
     else { swing+=(+n.params.swing||0); phase+=(+n.params.nudge||0)/1000; hum=Math.max(hum,(+n.params.humanize||0)/100); }
     n=inputSrc(n,"clock");
   }
+  if(guard>=32) console.warn("resolveClock: clock chain too long or cyclic (>32 nodes) — voice idled", src&&src.id);
   const sw=s=>Math.max(0,Math.min(100,s));
   if(n && n.type==="clock") return {bpm:(n.params.bpm||120)*factor, swing:sw((n.params.swing||0)+swing), enabled:n.params.enabled!==false, phase, humanize:hum};
   return {bpm:120*factor, swing:sw(swing), enabled:false, phase, humanize:hum};   // chain never reaches a real clock -> idle
