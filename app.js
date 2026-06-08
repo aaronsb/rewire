@@ -289,8 +289,8 @@ function loadSpec(spec){
     leadMotifBusy:spec.leadMotifBusy, leadMotifVar:spec.leadMotifVar, leadMotifVarBusy:spec.leadMotifVarBusy,
     leadMotifBuild:spec.leadMotifBuild, leadMotifBuildBusy:spec.leadMotifBuildBusy });
   const drums= addNode("drums",380,30,{density:spec.drumDensity||"normal",pattern:spec.drumPattern||"",kit:spec.drumKit||"default",clap:!!spec.useClap,openHat:!!spec.useOpenHat});
-  const bass = addNode("bass",380,230,{style:BASS_FOR_DENSITY[spec.bassDensity]||"walking",wave:"square"});
-  const lead = addNode("lead",380,430,{wave:spec.leadWaveform||"square",mode:spec.motifMode||"chord"});
+  const bass = addNode("bass",380,230,{style:spec.bassStyle||BASS_FOR_DENSITY[spec.bassDensity]||"walking",wave:spec.bassWave||"square"});
+  const lead = addNode("lead",380,430,{style:spec.leadStyle||"motif",wave:spec.leadWaveform||"square",mode:spec.motifMode||"chord"});
   const pad  = addNode("pad",380,660,{style:"sustain"});
   const rev  = addNode("reverb",720,120,{wetness:spec.reverbWetness||0});
   const dly  = addNode("delay",720,300,{feedback:spec.delayFeedback||0,time:.75});
